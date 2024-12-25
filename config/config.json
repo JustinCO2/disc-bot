@@ -1,0 +1,10 @@
+{
+    "bot_settings": {
+        "default_prefix": "!",
+        "developer_mode": true,
+        "default_reminder_time": "12:00"
+    },
+    "logging": {
+        "level": "INFO"
+    }
+}
