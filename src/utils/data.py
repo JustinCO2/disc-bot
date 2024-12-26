@@ -104,6 +104,7 @@ async def edit_member(name: str, param: str, new_value: any):
 # Submission management
 async def submit_dmg(member: str, boss: str, damage: int, attachment: str):
     """Submit a damage update request."""
+    print(f"Preparing damage submission for member: {member}, boss: {boss}, damage: {damage}")
     guild_name = await find_guild_by_member(member)
     if not guild_name:
         raise ValueError(f"Member {member} not found in any guild")
@@ -112,12 +113,14 @@ async def submit_dmg(member: str, boss: str, damage: int, attachment: str):
         guilds = json.load(f)
 
     verification_channel_id = guilds[guild_name]["channels"]["verification"]
+    print(f"Found verification channel ID: {verification_channel_id}")
 
     return {
         "verification_channel_id": verification_channel_id,
         "content": f"Damage Update Request:\nMember: {member}\nBoss: {boss}\nDamage: {damage}",
         "attachment": attachment
     }
+
 
 async def submit_relics(member: str, attachment: str):
     """Submit a relic update request."""
@@ -138,13 +141,30 @@ async def submit_relics(member: str, attachment: str):
 
 async def find_guild_by_member(member: str) -> Optional[str]:
     """Find the guild a member belongs to."""
+    print(f"Looking up guild for member: {member}")
     with open('data/guilds.json', 'r') as f:
         guilds = json.load(f)
 
     for guild_name, guild_data in guilds.items():
         if member in guild_data["members"]:
+            print(f"Member {member} found in guild: {guild_name}")
             return guild_name
 
+    print(f"Member {member} not found in any guild.")
+    return None
+
+async def find_guild_by_channel(channel_id: int) -> Optional[str]:
+    """Find the guild associated with a verification channel."""
+    print(f"Looking up guild for channel ID: {channel_id}")
+    with open('data/guilds.json', 'r') as f:
+        guilds = json.load(f)
+
+    for guild_name, guild_data in guilds.items():
+        if guild_data["channels"]["verification"] == str(channel_id):
+            print(f"Channel ID {channel_id} matched with guild: {guild_name}")
+            return guild_name
+
+    print(f"Channel ID {channel_id} not found in any guild.")
     return None
 
 def validate_guilds_structure():

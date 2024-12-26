@@ -15,7 +15,8 @@ class OfficerCommands(commands.Cog):
             1248807669117227059,  # leader
             1248807293018046596,  # officer
             1243099655223513098,  # mod
-            1244616887250456577   # codeman
+            1244616887250456577,   # codeman
+            572251419386839041 # test server
         ]
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
