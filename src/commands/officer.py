@@ -3,6 +3,7 @@ from discord import app_commands
 import discord
 import json
 from typing import Optional
+from commands.member import boss_autocomplete
 from utils.data import add_member, edit_member
 from commands.admin import guild_param_autocomplete
 
@@ -13,7 +14,7 @@ class OfficerCommands(commands.Cog):
         self.bot = bot
 
     def is_officer(self, interaction: discord.Interaction) -> bool:
-        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852, 1244616887250456577, 1244455889965023366]  # Update role IDs as needed
+        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852, 1244616887250456577, 1244455889965023366, 1140634765297451113]  # Update role IDs as needed
         # 1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364 | leader roles, star/celest/galaxy/moon/clown/jester
         # 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852 | officer roles, same order
         # 1244616887250456577, 1244455889965023366 | codeman, test server
@@ -61,24 +62,24 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @app_commands.command()
-    @app_commands.autocomplete(name=member_autocomplete, param=guild_param_autocomplete)
+    @app_commands.autocomplete(name=member_autocomplete, boss=boss_autocomplete)
     async def edit_member(
         self,
         interaction: discord.Interaction,
         name: str,
-        param: str,
-        new_value: str
+        boss: str,
+        new_damage: int
     ):
         if not self.is_officer(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
 
         try:
-            if param in ["rvd", "aod", "la"]:
-                new_value = int(new_value)
+            if boss in ["rvd", "aod", "la"]:
+                new_damage = int(new_damage)
 
-            await edit_member(name, param, new_value)
-            await interaction.response.send_message(f"Successfully updated {param} for member: {name}")
+            await edit_member(name, boss, new_damage)
+            await interaction.response.send_message(f"Successfully updated {boss} for member: {name}")
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 

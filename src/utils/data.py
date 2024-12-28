@@ -82,7 +82,7 @@ async def add_member(name: str, guild: str, rvd: Optional[int] = 0, aod: Optiona
     with open('data/guilds.json', 'w') as f:
         json.dump(guilds, f, indent=4)
 
-async def edit_member(name: str, param: str, new_value: any):
+async def edit_member(name: str, boss: str, new_damage: int):
     """Edit member data."""
     with open('data/guilds.json', 'r') as f:
         guilds = json.load(f)
@@ -91,12 +91,12 @@ async def edit_member(name: str, param: str, new_value: any):
     if not member_guild:
         raise ValueError(f"Member {name} not found in any guild")
 
-    if param in ["rvd", "aod", "la"]:
-        guilds[member_guild]["members"][name]["damages"][param] = int(new_value)
-    elif param == "last_donation":
-        guilds[member_guild]["members"][name]["last_donation"] = new_value
+    if boss in ["rvd", "aod", "la"]:
+        guilds[member_guild]["members"][name]["damages"][boss] = int(new_damage)
+    elif boss == "last_donation":
+        guilds[member_guild]["members"][name]["last_donation"] = new_damage
     else:
-        raise ValueError(f"Invalid parameter: {param}")
+        raise ValueError(f"Invalid parameter: {boss}")
 
     with open('data/guilds.json', 'w') as f:
         json.dump(guilds, f, indent=4)
