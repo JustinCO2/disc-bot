@@ -4,6 +4,15 @@ import discord
 from typing import Optional
 from utils.data import create_guild, edit_guild
 
+async def guild_param_autocomplete(interaction: discord.Interaction, current: str):
+    """Autocomplete for guild parameters."""
+    fields = ["announcements", "leaderboard", "verification", "name", "role_id"]
+    return [
+        app_commands.Choice(name=field, value=field)
+        for field in fields
+        if current.lower() in field.lower()
+    ]
+
 class AdminCommands(commands.Cog):
     """Admin commands for managing guilds."""
 
@@ -11,14 +20,10 @@ class AdminCommands(commands.Cog):
         self.bot = bot
 
     async def has_permissions(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.guild_permissions.administrator:
-            return True
-        if any(role.id == 1244616887250456577 for role in interaction.user.roles):
-            return True
-
-        print(f"Permission denied for user {interaction.user.display_name} ({interaction.user.id}).")
-        return False
-
+        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1244616887250456577, 1244455889965023366]  # Update role IDs as needed
+        # 1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364 | leader roles, star/celest/galaxy/moon/clown/jester
+        # 1244616887250456577, 1244455889965023366 | codeman, test server
+        return any(role.id in allowed_roles for role in interaction.user.roles)
 
     @app_commands.command()
     async def create_guild(
@@ -47,6 +52,7 @@ class AdminCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @app_commands.command()
+    @app_commands.autocomplete(param=guild_param_autocomplete)
     async def edit_guild(
         self,
         interaction: discord.Interaction,

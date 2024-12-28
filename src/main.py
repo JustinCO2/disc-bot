@@ -4,6 +4,7 @@ import json
 import os
 from dotenv import load_dotenv
 import asyncio
+from utils.data import validate_guilds_structure
 
 load_dotenv()
 
@@ -18,35 +19,50 @@ intents.reactions = True
 intents.messages = True
 intents.guilds = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+class Bot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="!", intents=intents)
+        
+    async def setup_hook(self):
+        await load_extensions(self)
+
+bot = Bot()
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
-    await bot.tree.sync()
-    leaderboard_cog = bot.get_cog('LeaderboardCog')
-    #if leaderboard_cog:
-    #    await leaderboard_cog.initialize_leaderboards()
-    print(f"Slash commands synced. Bot ready.")
-
-async def load_extensions():
+    
     try:
-        await bot.load_extension("commands.admin")
-        await bot.load_extension("commands.member")
-        await bot.load_extension("commands.officer")
-        await bot.load_extension("commands.leaderboard")
-        print("Command extensions loaded successfully.")
+        print("Validating guild data...")
+        validate_guilds_structure()
+        print("Guild data validation complete.")
     except Exception as e:
-        print(f"Error loading extensions: {e}")
+        print(f"Validation error: {e}")
 
-async def main():
-    async with bot:
-        await load_extensions()
-        await bot.start(DISCORD_TOKEN)
-    @commands.command(name="init_leaderboard")
-    @commands.is_owner()
-    async def init_leaderboard(self, ctx):
-        await ctx.send("Leaderboard initialization attempted")
+    try:
+        await bot.tree.sync()
+        print("All commands synced successfully.")
+        for command in bot.tree.get_commands():
+            print(f"Registered command: {command.name}")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
+
+async def load_extensions(bot):
+    extensions = [
+        "commands.admin",
+        "commands.member",
+        "commands.officer",
+        "commands.leaderboard"
+    ]
+    for ext in extensions:
+        try:
+            await bot.load_extension(ext)
+            print(f"Loaded extension: {ext}")
+        except Exception as e:
+            print(f"Error loading extension {ext}: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        bot.run(DISCORD_TOKEN)
+    except Exception as e:
+        print(f"Bot encountered an error during runtime: {e}")

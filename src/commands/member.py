@@ -1,73 +1,52 @@
-from discord.ext import commands 
+from discord.ext import commands
 from discord import app_commands
 import discord
 import json
 import logging
 from typing import Optional
-from utils.data import submit_dmg, submit_relics, update_member_data, find_guild_by_member, find_guild_by_channel
+from utils.data import (
+    submit_dmg,
+    submit_relics,
+    update_member_data,
+    find_guild_by_member,
+    find_guild_by_channel
+)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
+
+async def member_autocomplete(interaction: discord.Interaction, current: str):
+    """Provide autocomplete for members."""
+    print(f"Autocomplete triggered. Input: '{current}'")
+    try:
+        with open('data/guilds.json', 'r') as f:
+            guilds = json.load(f)
+        members = [member for guild in guilds.values() for member in guild["members"].keys()]
+        return [
+            app_commands.Choice(name=member, value=member)
+            for member in members if current.lower() in member.lower()
+        ]
+    except Exception as e:
+        print(f"Error in member_autocomplete: {e}")
+        return []
+
+async def boss_autocomplete(interaction: discord.Interaction, current: str):
+    bosses = ["la", "rvd", "aod"]
+    return [
+        app_commands.Choice(name=boss, value=boss)
+        for boss in bosses if current.lower() in boss.lower()
+    ]
 
 class MemberCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.pending_updates = {}
         logger.info("MemberCommands cog initialized")
-        
-    async def cog_load(self):
-        logger.info("MemberCommands cog loaded")
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        logger.info(f"Reaction detected: {reaction.emoji} by {user}")
-        if user.bot:
-            return
-
-        message = reaction.message
-        if message.id not in self.pending_updates:
-            return
-
-        logger.info(f"Processing reaction for message {message.id}")
-        check_reactions = discord.utils.get(message.reactions, emoji="✅")
-        x_reactions = discord.utils.get(message.reactions, emoji="❌")
-        
-        check_count = check_reactions.count if check_reactions else 0
-        x_count = x_reactions.count if x_reactions else 0
-        
-        logger.info(f"Reaction counts - ✅: {check_count}, ❌: {x_count}")
-
-        if check_count >= 2:
-            update_info = self.pending_updates[message.id]
-            try:
-                if update_info['type'] == 'damage':
-                    await update_member_data(
-                        update_info['guild'],
-                        update_info['member'],
-                        'damages',
-                        update_info['data']
-                    )
-                else:
-                    await update_member_data(
-                        update_info['guild'],
-                        update_info['member'],
-                        'last_donation',
-                        update_info['data']
-                    )
-                await message.delete()
-                del self.pending_updates[message.id]
-                logger.info(f"Update successful for message {message.id}")
-            except Exception as e:
-                logger.error(f"Error updating data: {e}")
-                await message.channel.send(f"Error updating data: {e}")
-        elif x_count >= 2:
-            await message.delete()
-            del self.pending_updates[message.id]
-            logger.info(f"Message {message.id} rejected and deleted")
-
-    @app_commands.command(name="submit_dmg", description="Submit damage for verification")
-    async def submit_dmg(
+    @app_commands.command(name="submit_dmg", description="Submit damage image for verification")
+    @app_commands.autocomplete(member=member_autocomplete, boss=boss_autocomplete)
+    async def submit_dmg_command(
         self,
         interaction: discord.Interaction,
         member: str,
@@ -77,22 +56,21 @@ class MemberCommands(commands.Cog):
     ):
         logger.info(f"submit_dmg invoked by {interaction.user.display_name}")
         try:
-            with open('data/guilds.json', 'r') as f:
-                guilds = json.load(f)
-
-            guild_name = await find_guild_by_member(member)
-            if not guild_name:
-                logger.warning(f"Guild not found for member: {member}")
-                await interaction.response.send_message("Could not find guild for this member.", ephemeral=True)
-                return
-
-            verification_channel_id = guilds[guild_name]["channels"]["verification"]
-            verification_channel = interaction.guild.get_channel(int(verification_channel_id))
+            # Use the submit_dmg utility to prepare the submission
+            submission = await submit_dmg(member, boss, damage, attachment.url)
+            
+            # Get the verification channel
+            verification_channel = interaction.guild.get_channel(
+                int(submission["verification_channel_id"])
+            )
             if not verification_channel:
-                logger.warning(f"Verification channel not found for guild: {guild_name}")
-                await interaction.response.send_message("Verification channel not found.", ephemeral=True)
+                logger.warning(f"Verification channel not found")
+                await interaction.response.send_message(
+                    "Verification channel not found.", ephemeral=True
+                )
                 return
 
+            # Create and send embed
             embed = discord.Embed(
                 title="Damage Submission",
                 description=f"**Member:** {member}\n**Boss:** {boss}\n**Damage:** {damage}",
@@ -105,21 +83,74 @@ class MemberCommands(commands.Cog):
             await message.add_reaction("✅")
             await message.add_reaction("❌")
 
+            # Store pending update
+            guild_name = await find_guild_by_member(member)
             self.pending_updates[message.id] = {
                 'type': 'damage',
                 'guild': guild_name,
                 'member': member,
-                'data': (boss, damage)
+                'field': 'damages',
+                'value': (boss, damage)
             }
+            
             logger.info(f"Damage submission created with message ID: {message.id}")
-
-            await interaction.response.send_message("Damage update submitted for verification!", ephemeral=True)
+            await interaction.response.send_message(
+                "Damage update submitted for verification!", ephemeral=True
+            )
 
         except Exception as e:
             logger.error(f"Error in submit_dmg: {e}", exc_info=True)
-            await interaction.response.send_message(f"An error occurred: {e}", ephemeral=True)
+            await interaction.response.send_message(
+                f"An error occurred: {e}", ephemeral=True
+            )
 
-    # [submit_relics command implementation remains the same but with added logging]
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        """Handle reactions to verification messages."""
+        # Ignore bot's own reactions
+        if payload.user_id == self.bot.user.id:
+            return
+
+        # Check if this message is pending verification
+        update_info = self.pending_updates.get(payload.message_id)
+        if not update_info:
+            return
+
+        # Get the message
+        channel = self.bot.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+
+        # Process the reaction
+        if str(payload.emoji) == "✅":
+            try:
+                # Extract information
+                guild_name = update_info['guild']
+                member = update_info['member']
+                field = update_info['field']
+                value = update_info['value']
+                
+                # Use update_member_data utility to process the update
+                await update_member_data(guild_name, member, field, value)
+                logger.info(f"Update approved for {member} in {guild_name}")
+                
+                # Delete the verification message
+                await message.delete()
+                # Remove from pending updates
+                del self.pending_updates[payload.message_id]
+                
+            except Exception as e:
+                logger.error(f"Error processing verification: {e}", exc_info=True)
+                await channel.send(
+                    f"Error processing verification: {e}", delete_after=10
+                )
+                
+        elif str(payload.emoji) == "❌":
+            try:
+                await message.delete()
+                del self.pending_updates[payload.message_id]
+                logger.info(f"Submission rejected for {update_info['member']}")
+            except Exception as e:
+                logger.error(f"Error processing rejection: {e}", exc_info=True)
 
 async def setup(bot: commands.Bot):
     logger.info("Setting up MemberCommands cog")

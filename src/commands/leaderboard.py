@@ -3,62 +3,73 @@ from discord.ext import commands, tasks
 import json
 from typing import Dict
 import logging
+import os
 
 logger = logging.getLogger('discord')
 
 class LeaderboardCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.messages = {}
+        self.messages = self.load_message_ids()
         self.update_leaderboards.start()
 
+    def load_message_ids(self) -> Dict:
+        """Load saved message IDs from JSON file."""
+        try:
+            if os.path.exists('data/leaderboard_messages.json'):
+                with open('data/leaderboard_messages.json', 'r') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            logger.error(f"Error loading leaderboard_messages.json: {e}")
+            return {}
+
+    def save_message_ids(self):
+        """Save message IDs to JSON file."""
+        try:
+            with open('data/leaderboard_messages.json', 'w') as f:
+                json.dump(self.messages, f, indent=4)
+        except Exception as e:
+            logger.error(f"Error saving leaderboard_messages.json: {e}")
+
     def format_damage(self, damage: int) -> str:
-        if damage >= 1_000_000: return f"{damage/1_000_000:.1f}M"
+        if damage >= 1_000_000_000: return f"{damage/1_000_000_000:.2f}B"
         return str(damage)
 
     def format_leaderboard(self, guild_name: str, guild_data: Dict) -> str:
-        widths = {
-            'idx': 2,
-            'member': 12,
-            'rvd': 8,
-            'aod': 8,
-            'la': 8
-        }
-        
-        output = ["```"]
-        
+        # Column widths
+        member_col_width = 7
+        rvd_col_width = 5
+        aod_col_width = 5
+        la_col_width = 5
+
+        # Build leaderboard string
+        leaderboard = ["```"]
+
         # Header
-        header = (f"{guild_name} Damage Leaderboard\n\n"
-                 f"{'#':<{widths['idx']}} | "
-                 f"{'Member':<{widths['member']}} | "
-                 f"{'RVD':<{widths['rvd']}} | "
-                 f"{'AOD':<{widths['aod']}} | "
-                 f"{'LA':<{widths['la']}}")
-        output.append(header)
-        
-        # Separator
-        separator = '-' * (sum(widths.values()) + 12)
-        output.append(separator)
-        
+        leaderboard.append(f"{guild_name} DMG Board\n")
+        leaderboard.append(f"{'#':<2} │ {'Members':<{member_col_width}} │ {'RVD':>{rvd_col_width}} │ {'AOD':>{aod_col_width}} │ {'LA':>{la_col_width}}")
+        leaderboard.append('─' * (2 + 3 + member_col_width + 3 + rvd_col_width + 3 + aod_col_width + 3 + la_col_width))
+
         # Sort members by total damage
         sorted_members = sorted(
             guild_data["members"].items(),
             key=lambda x: sum(x[1]["damages"].values()),
             reverse=True
         )
-        
-        # Member rows
+
+        # Rows
         for idx, (member, data) in enumerate(sorted_members, 1):
             damages = data["damages"]
-            row = (f"{idx:<{widths['idx']}} | "
-                  f"{member[:12]:<{widths['member']}} | "
-                  f"{self.format_damage(damages['rvd']):<{widths['rvd']}} | "
-                  f"{self.format_damage(damages['aod']):<{widths['aod']}} | "
-                  f"{self.format_damage(damages['la']):<{widths['la']}}")
-            output.append(row)
-            
-        output.append("```")
-        return '\n'.join(output)
+            leaderboard.append(
+                f"{idx:<2} │ {member[:member_col_width]:<{member_col_width}} │ "
+                f"{self.format_damage(damages['rvd']):>{rvd_col_width}} │ "
+                f"{self.format_damage(damages['aod']):>{aod_col_width}} │ "
+                f"{self.format_damage(damages['la']):>{la_col_width}}"
+            )
+
+        leaderboard.append("```")
+        return "\n".join(leaderboard)
 
     async def load_guilds(self) -> Dict:
         try:
@@ -81,9 +92,19 @@ class LeaderboardCog(commands.Cog):
                     logger.error(f"Could not find channel {channel_id} for guild {guild_name}")
                     continue
 
+                # Try to fetch existing message first
+                if guild_name in self.messages:
+                    try:
+                        await channel.fetch_message(int(self.messages[guild_name]))
+                        logger.info(f"Found existing leaderboard for {guild_name}")
+                        continue
+                    except (discord.NotFound, discord.HTTPException):
+                        logger.info(f"Stored message for {guild_name} not found, creating new one")
+
                 content = self.format_leaderboard(guild_name, guild_data)
                 message = await channel.send(content)
-                self.messages[guild_name] = message.id
+                self.messages[guild_name] = str(message.id)
+                self.save_message_ids()
                 logger.info(f"Created leaderboard for {guild_name} in channel {channel_id}")
                 
             except Exception as e:
@@ -100,20 +121,22 @@ class LeaderboardCog(commands.Cog):
 
             content = self.format_leaderboard(guild_name, guild_data)
             
-            if guild_name not in self.messages:
-                message = await channel.send(content)
-                self.messages[guild_name] = message.id
-                logger.info(f"Created new leaderboard for {guild_name}")
-                return
+            message = None
+            if guild_name in self.messages:
+                try:
+                    message = await channel.fetch_message(int(self.messages[guild_name]))
+                except (discord.NotFound, discord.HTTPException):
+                    logger.info(f"Stored message for {guild_name} not found, creating new one")
+                    message = None
 
-            try:
-                message = await channel.fetch_message(self.messages[guild_name])
+            if message:
                 await message.edit(content=content)
-                logger.info(f"Updated leaderboard for {guild_name}")
-            except discord.NotFound:
+                logger.info(f"Updated existing leaderboard for {guild_name}")
+            else:
                 message = await channel.send(content)
-                self.messages[guild_name] = message.id
-                logger.info(f"Recreated leaderboard for {guild_name}")
+                self.messages[guild_name] = str(message.id)
+                self.save_message_ids()
+                logger.info(f"Created new leaderboard for {guild_name}")
                 
         except Exception as e:
             logger.error(f"Error updating leaderboard for {guild_name}: {e}")
@@ -128,6 +151,7 @@ class LeaderboardCog(commands.Cog):
     @update_leaderboards.before_loop
     async def before_update(self):
         await self.bot.wait_until_ready()
+        await self.initialize_leaderboards()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):

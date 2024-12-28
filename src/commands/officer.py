@@ -1,8 +1,10 @@
 from discord.ext import commands
 from discord import app_commands
 import discord
+import json
 from typing import Optional
 from utils.data import add_member, edit_member
+from commands.admin import guild_param_autocomplete
 
 class OfficerCommands(commands.Cog):
     """Officer commands for managing members."""
@@ -11,16 +13,34 @@ class OfficerCommands(commands.Cog):
         self.bot = bot
 
     def is_officer(self, interaction: discord.Interaction) -> bool:
-        allowed_roles = [
-            1248807669117227059,  # leader
-            1248807293018046596,  # officer
-            1243099655223513098,  # mod
-            1244616887250456577,   # codeman
-            572251419386839041 # test server
-        ]
+        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852, 1244616887250456577, 1244455889965023366]  # Update role IDs as needed
+        # 1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364 | leader roles, star/celest/galaxy/moon/clown/jester
+        # 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852 | officer roles, same order
+        # 1244616887250456577, 1244455889965023366 | codeman, test server
+
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
+    async def guild_autocomplete(self, interaction: discord.Interaction, current: str):
+        with open('data/guilds.json', 'r') as f:
+            guilds = json.load(f)
+        return [
+            app_commands.Choice(name=guild, value=guild)
+            for guild in guilds.keys()
+            if current.lower() in guild.lower()
+        ]
+
+    async def member_autocomplete(self, interaction: discord.Interaction, current: str):
+        with open('data/guilds.json', 'r') as f:
+            guilds = json.load(f)
+        members = [member for guild in guilds.values() for member in guild["members"].keys()]
+        return [
+            app_commands.Choice(name=member, value=member)
+            for member in members
+            if current.lower() in member.lower()
+        ]
+
     @app_commands.command()
+    @app_commands.autocomplete(guild=guild_autocomplete)
     async def add_member(
         self,
         interaction: discord.Interaction,
@@ -41,6 +61,7 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @app_commands.command()
+    @app_commands.autocomplete(name=member_autocomplete, param=guild_param_autocomplete)
     async def edit_member(
         self,
         interaction: discord.Interaction,
