@@ -40,9 +40,11 @@ class OfficerCommands(commands.Cog):
             if current.lower() in member.lower()
         ]
 
-    @app_commands.command()
+    member_group = app_commands.Group(name="member", description="Member management commands")
+
+    @member_group.command(name="add")
     @app_commands.autocomplete(guild=guild_autocomplete)
-    async def add_member(
+    async def member_add(
         self,
         interaction: discord.Interaction,
         name: str,
@@ -61,9 +63,9 @@ class OfficerCommands(commands.Cog):
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
-    @app_commands.command()
+    @member_group.command(name="edit")
     @app_commands.autocomplete(name=member_autocomplete, boss=boss_autocomplete)
-    async def edit_member(
+    async def member_edit(
         self,
         interaction: discord.Interaction,
         name: str,
