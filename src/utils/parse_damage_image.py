@@ -1,6 +1,5 @@
 from box import Timer
 
-from src.utils.preprocess_damage_image import binarize_and_save_image, sharpen_and_save_image
 timer = Timer()
 from box import handler, ic, ib, rel2abs, markup
 from paddleocr import PaddleOCR
@@ -100,7 +99,6 @@ def main():
     parse_image(image_path)
     print()
     return
-
 
     # exclude_paths = [ "assets/guild_dmgs_from_max/13.webp", "assets/guild_dmgs_from_max/14.webp", "assets/guild_dmgs_from_max/18.webp", "assets/guild_dmgs_from_max/27.webp", "assets/guild_dmgs_from_max/29.webp", "assets/guild_dmgs_from_max/30.webp", "assets/guild_dmgs_from_max/31.webp", "assets/guild_dmgs_from_max/32.webp", "assets/guild_dmgs_from_max/33.webp", "assets/guild_dmgs_from_max/35.webp", "assets/guild_dmgs_from_max/36.webp", "assets/guild_dmgs_from_max/37.webp", "assets/guild_dmgs_from_max/38.webp", "assets/guild_dmgs_from_max/42.webp", "assets/guild_dmgs_from_max/43.webp", "assets/guild_dmgs_from_max/44.webp", "assets/guild_dmgs_from_max/45.webp", "assets/guild_dmgs_from_max/46.webp", "assets/guild_dmgs_from_max/48.webp", "assets/guild_dmgs_from_max/50.webp" ]
     # paths = [path for path in paths if path not in exclude_paths]
