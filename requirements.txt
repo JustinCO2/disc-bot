@@ -4,7 +4,10 @@ python-dotenv>=0.21.0
 selenium
 
 box
+pytest
+
 jinja2
 
+Pillow # image height and width
 paddlepaddle
 paddleocr
