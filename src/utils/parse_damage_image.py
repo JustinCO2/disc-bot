@@ -95,7 +95,7 @@ def parse_image(image_path):
     return stats
 
 def main():
-    image_path = 'assets/36_highres.webp'
+    image_path = 'assets/guild_dmgs/kim aod 1.jpg'
     parse_image(image_path)
     print()
     return

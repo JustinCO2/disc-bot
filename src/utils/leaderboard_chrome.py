@@ -5,6 +5,8 @@ import os
 from jinja2 import Environment, FileSystemLoader
 from selenium.webdriver.common.by import By
 import time
+import sys
+from box import markup
 
 def get_player_stats(guild_data):
     def format_number(n):
@@ -68,6 +70,18 @@ def create_damage_board(guild_name, guild_data):
 
     path_to_chromedriver = "bin/chromedriver"
     path_to_chrome = "bin/chrome-headless-shell-linux64/chrome-headless-shell"
+
+    # Check if files are executable
+
+    if any(not os.access(path, os.X_OK) for path in [path_to_chromedriver, path_to_chrome]):
+        print()
+        print(markup("[bold red]PERMISSION ERROR[/] Some files are not executable. Please run:"))
+        print()
+    for path in [path_to_chromedriver, path_to_chrome]:
+        if not os.access(path, os.X_OK):
+            print("    " + markup(f"[bold yellow]chmod +x {path}[/]"))
+    if any(not os.access(path, os.X_OK) for path in [path_to_chromedriver, path_to_chrome]):
+        sys.exit(1)
 
     chrome_options.binary_location = path_to_chrome
     service = webdriver.ChromeService(path_to_chromedriver)

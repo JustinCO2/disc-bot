@@ -11,31 +11,38 @@ import time
 import hashlib
 from pathlib import Path
 import sys
+from typing import Literal
 timer = Timer()
 
 def get_cache_path(url: str) -> Path:
     """Get cache file path for a URL"""
     # Use system's temp dir and create our cache subdir
-    cache_dir = Path(os.getenv('TEMP', '/tmp')) / 'unzip_url_cache'
+    if os.name == 'nt':  # Windows
+        temp_dir = os.getenv('TEMP') or os.getenv('TMP') or os.path.expanduser('~\\AppData\\Local\\Temp')
+    else:  # Unix/Linux/Mac
+        temp_dir = os.getenv('TMPDIR') or '/tmp'
+    
+    cache_dir = Path(temp_dir) / 'unzip_url_cache'
     cache_dir.mkdir(parents=True, exist_ok=True)
     
     # Create filename from URL hash
     url_hash = hashlib.sha256(url.encode()).hexdigest()[:16]
     return cache_dir / url_hash
 
-def format_size(size_bytes: int) -> str:
+def format_size(size_bytes: float) -> str:
     """Convert bytes to human readable string"""
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size_bytes < 1024 or unit == 'GB':
+    for unit in ['B', 'KB', 'MB']:
+        if size_bytes < 1024:
             return f"{size_bytes:.1f}{unit}"
         size_bytes /= 1024
+    return f"{size_bytes:.1f}GB"
 
-def download_with_cache(url_or_path: str) -> tuple[bytes, str]:
+def download_with_cache(url_or_path: str) -> tuple[bytearray, Literal['zip', 'gz']]:
     """Download URL or read local file with caching (1 hour expiry for URLs)"""
     # Check if it's a local file
     if os.path.exists(url_or_path):
         try:
-            data = Path(url_or_path).read_bytes()
+            data = bytearray(Path(url_or_path).read_bytes())  # Convert bytes to bytearray
             # Detect file type
             try:
                 zipfile.ZipFile(io.BytesIO(data))
@@ -60,7 +67,7 @@ def download_with_cache(url_or_path: str) -> tuple[bytes, str]:
     if cache_path.exists():
         mtime = cache_path.stat().st_mtime
         if time.time() - mtime < 3600:  # 1 hour cache
-            data = cache_path.read_bytes()
+            data = bytearray(cache_path.read_bytes())  # Convert bytes to bytearray
             # Need to detect file type for cached files too
             try:
                 zipfile.ZipFile(io.BytesIO(data))
@@ -139,7 +146,7 @@ def download_with_cache(url_or_path: str) -> tuple[bytes, str]:
     cache_path.write_bytes(data)
     return data, file_type
 
-def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, rename: str | None = None):
+def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, rename: str | None = None) -> str | None:
     """
     Extract file(s) from a remote zip/gz archive, or list contents if only URL provided
     
@@ -148,6 +155,9 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
         select: Path within archive to extract (file or folder), or None to list contents
         out_dir: Directory to extract to (required if select is provided)
         rename: Optional new name (only applies to single files)
+        
+    Returns:
+        str | None: Path to extracted file/directory, or None if just listing contents
     """
     try:
         # Download the file (with caching)
@@ -160,13 +170,18 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                     print("Valid --select options:")
                     print("------------------------")
                     for info in zf.filelist:
-                        if not info.filename.endswith('/'):  # Skip empty directories
-                            print(info.filename)
-                    return
+                        # Normalize path separators for display
+                        normalized_path = info.filename.replace('\\', '/')
+                        if not normalized_path.endswith('/'):  # Skip empty directories
+                            print(normalized_path)
+                    return None
+                
+                # Normalize the select path to use forward slashes
+                select = select.replace('\\', '/')
                 
                 # Validate --select path exists
-                files = zf.namelist()
-                if select.endswith('/') or select.endswith('\\'):
+                files = [f.replace('\\', '/') for f in zf.namelist()]
+                if select.endswith('/'):
                     # For directories, check if any files start with this path
                     if not any(f.startswith(select) for f in files):
                         print(f"Error: Directory '{select}' not found in archive")
@@ -189,7 +204,7 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                 
                 # If no out_dir, we're just validating
                 if not out_dir:
-                    return
+                    return None
                 
                 # Handle extraction
                 if select.endswith('/') or select.endswith('\\'):
@@ -200,21 +215,23 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                             out_path = Path(out_dir) / info.filename
                             zf.extract(info, out_dir)
                             extracted.append(out_path)
-                    print(f"Extracted {len(extracted)} files to {Path(out_dir) / select}")
+                    final_path = str(Path(out_dir) / select)
+                    print(f"Extracted {len(extracted)} files to {final_path}")
+                    return final_path
                 else:
                     # Extract single file
                     if rename:
                         out_name = rename
                     else:
-                        out_name = Path(select).name  # Just the filename, no directories
+                        out_name = Path(select).name
                         
-                    # Extract directly to out_dir
+                    out_path = Path(out_dir) / out_name
+                    out_path.parent.mkdir(parents=True, exist_ok=True)
                     with zf.open(select) as source:
-                        out_path = Path(out_dir) / out_name
-                        out_path.parent.mkdir(parents=True, exist_ok=True)
                         with open(out_path, 'wb') as target:
                             shutil.copyfileobj(source, target)
-                        print(f"Extracted: {out_path}")
+                    print(f"Extracted: {out_path}")
+                    return str(out_path)
                         
         elif file_type == 'gz':
             if not select:
@@ -222,7 +239,7 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                 print("Valid --select options:")
                 print("------------------------")
                 print(Path(url).stem)
-                return
+                return None
                 
             # For gz, only '.' is valid as it contains just one file
             if select != '.' and select != Path(url).stem:
@@ -234,7 +251,7 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                 
             # If no out_dir, we're just validating
             if not out_dir:
-                return
+                return None
                 
             # gz only contains one file
             with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
@@ -248,6 +265,7 @@ def unzip_url(url: str, select: str | None = None, out_dir: str | None = None, r
                 with open(out_path, 'wb') as f:
                     shutil.copyfileobj(gz, f)
                 print(f"Extracted: {out_path}")
+                return str(out_path)
             
     except (ValueError, ConnectionError) as e:
         print(f"Error: {str(e)}", file=sys.stderr)
