@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 import time
 import sys
 from box import markup
+import platform
 
 def get_player_stats(guild_data):
     def format_number(n):
@@ -68,8 +69,14 @@ def create_damage_board(guild_name, guild_data):
     chrome_options.add_argument('--start-maximized')
     chrome_options.add_argument('--force-device-scale-factor=2.0')  # Increase resolution
 
-    path_to_chromedriver = "bin/chromedriver"
-    path_to_chrome = "bin/chrome-headless-shell-linux64/chrome-headless-shell"
+    if platform.system() == 'Windows':
+        path_to_chromedriver = "bin/chromedriver.exe"
+        path_to_chrome = "bin/chrome-headless-shell-win64/chrome-headless-shell.exe"
+    elif platform.system() == 'Linux':
+        path_to_chromedriver = "bin/chromedriver"
+        path_to_chrome = "bin/chrome-headless-shell-linux64/chrome-headless-shell"
+    else:
+        raise Exception("Unsupported platform")
 
     # Check if files are executable
 
