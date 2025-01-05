@@ -8,6 +8,8 @@ from unzip_url import unzip_url
 
 def test_chromedriver_via_selenium(path_to_chromedriver, path_to_chrome):
 
+    print(markup("[bold blue]TEST[/] [bold magenta]GET[/] [yellow]https://www.google.com[/]"))
+
     if any(not os.access(path, os.X_OK) for path in [path_to_chromedriver, path_to_chrome]):
         print()
         print(markup("[bold red]PERMISSION ERROR[/] Some files are not executable. Please run:"))
@@ -29,10 +31,12 @@ def test_chromedriver_via_selenium(path_to_chromedriver, path_to_chrome):
 
     driver.get("https://www.google.com")
 
+    title = driver.title
     print(f"Page title: {driver.title}")
     driver.quit()
 
-    print("Test passed")
+    if title == "Google":
+        print(markup("[bold green]PASSED[/]"))
 
 def setup_chrome_testing_binaries():
 
@@ -79,6 +83,7 @@ def setup_chrome_testing_binaries():
 
 def main():
     path_to_chromedriver, path_to_chrome = setup_chrome_testing_binaries()
+    print()
     test_chromedriver_via_selenium(path_to_chromedriver, path_to_chrome)
 
 if __name__ == "__main__":
