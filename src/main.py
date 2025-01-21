@@ -35,8 +35,8 @@ bot = Bot()
 @bot.event
 async def on_ready():
     try:
-        bot.tree.clear_commands(guild=None)  # Clear global commands
-        synced = await bot.tree.sync()
+        bot.tree.clear_commands(guild=1140429772531449886)
+        synced = await bot.tree.sync(guild=discord.Object(id=1140429772531449886))
         print(f"Cleared and synced {len(synced)} command(s).")
         for command in bot.tree.get_commands():
             print(f"Registered command: {command.name}")
