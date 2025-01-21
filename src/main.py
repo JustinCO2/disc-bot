@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
-from utils.data import validate_guilds_structure
 
 load_dotenv()
 
