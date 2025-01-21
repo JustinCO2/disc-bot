@@ -76,6 +76,7 @@ asyncio.run(test_mongo())
 
 if __name__ == "__main__":
     try:
+        print("Discord.py version:", discord.__version__)
         bot.run(DISCORD_TOKEN)
     except Exception as e:
         print(f"Bot encountered an error during runtime: {e}")
