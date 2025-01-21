@@ -48,9 +48,8 @@ class OfficerCommands(commands.Cog):
             for member in members if current.lower() in member.lower()
         ]
 
-    @app_commands.guilds(discord.Object(id=1140429772531449886))
     member_group = app_commands.Group(name="member", description="Member management commands")
-    
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
 
     @member_group.command(name="add")
     @app_commands.autocomplete(guild=guild_autocomplete)
