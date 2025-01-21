@@ -8,7 +8,7 @@ from utils.data import (
     submit_relics,
     update_member_data,
     find_guild_by_member,
-    find_guild_by_channel
+    find_guild_by_channel,
     parse_damage_input
 )
 from motor.motor_asyncio import AsyncIOMotorClient
