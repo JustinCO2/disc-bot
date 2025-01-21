@@ -14,9 +14,7 @@ from utils.data import (
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('discord')
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 # MongoDB connection setup
 MONGO_URL = os.getenv("MONGO_URL")

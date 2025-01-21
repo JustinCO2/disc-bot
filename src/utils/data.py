@@ -31,6 +31,8 @@ def parse_damage_input(damage_str):
     Accepts inputs in formats like "8.88b", "8880M", or raw numbers.
     """
     try:
+        if isinstance(damage_str, (int, float)):
+            damage_str = str(damage_str)
         damage_str = damage_str.lower().strip()
         if damage_str.endswith(('b', 'm')):
             multiplier = 1e9 if damage_str.endswith('b') else 1e6
