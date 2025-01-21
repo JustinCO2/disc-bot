@@ -23,6 +23,14 @@ intents.reactions = True
 intents.messages = True
 intents.guilds = True
 
+# Hardcoded guild IDs for development
+DEV_GUILD_ID_1 = 1140429772531449886
+DEV_GUILD_ID_2 = 513561942984753154
+
+def restrict_to_dev_guilds(command):
+    """Decorator to restrict a command to development guilds."""
+    return commands.guilds(discord.Object(id=DEV_GUILD_ID_1), discord.Object(id=DEV_GUILD_ID_2))(command)
+
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
