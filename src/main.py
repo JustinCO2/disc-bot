@@ -32,14 +32,18 @@ class Bot(commands.Bot):
 
 bot = Bot()
 
+# Replace with your numeric Guild ID
 guild_id = 1140429772531449886
+# Wrap the integer in a discord.Object for guild-specific sync
 guild_obj = discord.Object(id=guild_id)
 
 @bot.event
 async def on_ready():
     try:
-        bot.tree.clear_commands(guild=guild_obj)
-        synced = await bot.tree.sync(guild=discord.Object(id=guild_obj))
+        # Make sure to await clear_commands
+        await bot.tree.clear_commands(guild=guild_obj)
+        # Use the same guild_obj (do NOT nest discord.Object again)
+        synced = await bot.tree.sync(guild=guild_obj)
         print(f"Cleared and synced {len(synced)} command(s).")
         for command in bot.tree.get_commands():
             print(f"Registered command: {command.name}")
@@ -49,9 +53,9 @@ async def on_ready():
 @bot.command()
 async def list_commands(ctx):
     """List all registered slash commands."""
-    commands = await bot.tree.fetch_commands()
-    for command in commands:
-        await ctx.send(f"Command: {command.name}, Description: {command.description}")
+    commands_ = await bot.tree.fetch_commands()
+    for cmd in commands_:
+        await ctx.send(f"Command: {cmd.name}, Description: {cmd.description}")
 
 async def load_extensions(bot):
     extensions = ["commands.admin", "commands.member", "commands.officer", "commands.leaderboard"]
@@ -62,7 +66,6 @@ async def load_extensions(bot):
         except Exception as e:
             print(f"Error loading extension {ext}: {e}")
     print(f"Current commands: {bot.tree.get_commands()}")
-
 
 async def test_mongo():
     try:
