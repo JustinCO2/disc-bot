@@ -34,15 +34,21 @@ bot = Bot()
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
-
     try:
-        await bot.tree.sync()
-        print("All commands synced successfully.")
+        bot.tree.clear_commands(guild=None)  # Clear global commands
+        synced = await bot.tree.sync()
+        print(f"Cleared and synced {len(synced)} command(s).")
         for command in bot.tree.get_commands():
             print(f"Registered command: {command.name}")
     except Exception as e:
-        print(f"Failed to sync commands: {e}")
+        print(f"Failed to clear and sync commands: {e}")
+
+@bot.command()
+async def list_commands(ctx):
+    """List all registered slash commands."""
+    commands = await bot.tree.fetch_commands()
+    for command in commands:
+        await ctx.send(f"Command: {command.name}, Description: {command.description}")
 
 async def load_extensions(bot):
     extensions = [
