@@ -28,7 +28,7 @@ class AdminCommands(commands.Cog):
         allowed_roles = [
             1248807293018046596, 1321315696801615872, 1321315779085467701,
             1321315841366687785, 1321315919401586771, 1321315967120441364,
-            1244616887250456577, 1244455889965023366
+            1244616887250456577, 1244455889965023366, 1217354048416645150
         ]  # Update role IDs as needed
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
@@ -103,6 +103,39 @@ class AdminCommands(commands.Cog):
             await interaction.response.send_message(f"Successfully updated {param} for guild: {name}")
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="delete_member", description="Remove a member from the database")
+    async def delete_member(
+        self,
+        interaction: discord.Interaction,
+        guild_name: str,
+        member_name: str
+    ):
+        """Delete a member from the guild."""
+        if not await self.has_permissions(interaction):
+            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+            return
+
+        try:
+            guild = await db.guilds.find_one({"_id": guild_name})
+            if not guild:
+                raise ValueError(f"Guild {guild_name} does not exist")
+
+            members = guild.get("members", {})
+            if member_name not in members:
+                raise ValueError(f"Member {member_name} not found in guild {guild_name}")
+
+            # Remove the member
+            await db.guilds.update_one(
+                {"_id": guild_name},
+                {"$unset": {f"members.{member_name}": ""}}
+            )
+
+            await interaction.response.send_message(f"Successfully removed member: {member_name} from guild: {guild_name}")
+        except ValueError as e:
+            await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"An unexpected error occurred: {str(e)}", ephemeral=True)
 
 async def setup(bot: commands.Bot):
     """Registers the cog with the bot."""
