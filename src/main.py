@@ -35,13 +35,6 @@ bot = Bot()
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
-    
-    try:
-        print("Validating guild data...")
-        await validate_guilds_structure(db)  # Pass MongoDB connection to validation
-        print("Guild data validation complete.")
-    except Exception as e:
-        print(f"Validation error: {e}")
 
     try:
         await bot.tree.sync()
