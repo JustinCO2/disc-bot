@@ -58,6 +58,15 @@ async def load_extensions(bot):
         except Exception as e:
             print(f"Error loading extension {ext}: {e}")
 
+async def test_mongo():
+    try:
+        await db.command("ping")
+        print("MongoDB connection successful!")
+    except Exception as e:
+        print(f"MongoDB connection failed: {e}")
+
+asyncio.run(test_mongo())
+
 if __name__ == "__main__":
     try:
         bot.run(DISCORD_TOKEN)
