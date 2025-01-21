@@ -25,6 +25,23 @@ MEMBER_TEMPLATE = {
     "last_donation": None
 }
 
+def parse_damage_input(damage_str):
+    """
+    Parses damage input string and returns the value in raw numbers (float).
+    Accepts inputs in formats like "8.88b", "8880M", or raw numbers.
+    """
+    damage_str = damage_str.lower().strip()
+    if damage_str.endswith('b'):
+        return float(damage_str[:-1]) * 1e9
+    if damage_str.endswith('B'):
+        return float(damage_str[:-1]) * 1e9    
+    if damage_str.endswith('M'):
+        return float(damage_str[:-1]) * 1e6    
+    elif damage_str.endswith('m'):
+        return float(damage_str[:-1]) * 1e6
+    else:
+        return float(damage_str)
+
 async def create_guild(name: str, announce_id: str, leaderboard_id: str, verif_id: str, role_id: str):
     """Create a new guild using the template."""
     new_guild = GUILD_TEMPLATE.copy()
@@ -83,20 +100,35 @@ async def edit_member(name: str, boss: str, new_damage: int):
     if result.matched_count == 0:
         raise ValueError(f"Member {name} not found in any guild")
 
-async def submit_dmg(member: str, boss: str, damage: int, attachment: str):
+async def submit_dmg(member: str, boss: str, damage: str, attachment: str):
     """Submit a damage update request."""
-    guild_name = await find_guild_by_member(member)
-    if not guild_name:
-        raise ValueError(f"Member {member} not found in any guild")
+    try:
+        # Find the guild associated with the member
+        guild_name = await find_guild_by_member(member)
+        if not guild_name:
+            raise ValueError(f"Member {member} not found in any guild")
 
-    guild = await db.guilds.find_one({"_id": guild_name})
-    verification_channel_id = guild["channels"]["verification"]
+        # Fetch guild data from the database
+        guild = await db.guilds.find_one({"_id": guild_name})
+        if not guild or "channels" not in guild or "verification" not in guild["channels"]:
+            raise ValueError(f"Verification channel not configured for guild {guild_name}")
 
-    return {
-        "verification_channel_id": verification_channel_id,
-        "content": f"Damage Update Request:\nMember: {member}\nBoss: {boss}\nDamage: {damage}",
-        "attachment": attachment
-    }
+        verification_channel_id = guild["channels"]["verification"]
+
+        # Parse and format damage
+        parsed_damage = parse_damage_input(damage)
+        formatted_damage = f"{parsed_damage / 1e9:.2f}B"
+
+        # Return the response dictionary
+        return {
+            "verification_channel_id": verification_channel_id,
+            "content": f"Damage Update Request:\nMember: {member}\nBoss: {boss}\nDamage: {formatted_damage}",
+            "attachment": attachment
+        }
+
+    except Exception as e:
+        logger.error(f"Error in submit_dmg: {e}")
+        raise
 
 async def submit_relics(member: str, attachment: str):
     """Submit a relic update request."""

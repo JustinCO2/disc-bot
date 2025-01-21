@@ -9,6 +9,7 @@ from utils.data import (
     update_member_data,
     find_guild_by_member,
     find_guild_by_channel
+    parse_damage_input
 )
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -60,14 +61,17 @@ class MemberCommands(commands.Cog):
         interaction: discord.Interaction,
         member: str,
         boss: str,
-        damage: int,
+        damage: str,
         attachment: discord.Attachment
     ):
         logger.info(f"submit_dmg invoked by {interaction.user.display_name}")
         try:
+            # Parse damage input
+            parsed_damage = parse_damage_input(damage)
+
             # Use the submit_dmg utility to prepare the submission
-            submission = await submit_dmg(member, boss, damage, attachment.url)
-            
+            submission = await submit_dmg(member, boss, parsed_damage, attachment.url)
+
             # Get the verification channel
             verification_channel = interaction.guild.get_channel(
                 int(submission["verification_channel_id"])
@@ -82,7 +86,7 @@ class MemberCommands(commands.Cog):
             # Create and send embed
             embed = discord.Embed(
                 title="Damage Submission",
-                description=f"**Member:** {member}\n**Boss:** {boss}\n**Damage:** {damage}",
+                description=f"**Member:** {member}\n**Boss:** {boss}\n**Damage:** {parsed_damage / 1e9:.2f}B",
                 color=discord.Color.blue()
             )
             embed.set_image(url=attachment.url)
@@ -99,9 +103,9 @@ class MemberCommands(commands.Cog):
                 'guild': guild_name,
                 'member': member,
                 'field': 'damages',
-                'value': (boss, damage)
+                'value': (boss, parsed_damage)
             }
-            
+
             logger.info(f"Damage submission created with message ID: {message.id}")
             await interaction.response.send_message(
                 "Damage update submitted for verification!", ephemeral=True
@@ -136,22 +140,22 @@ class MemberCommands(commands.Cog):
                 member = update_info['member']
                 field = update_info['field']
                 value = update_info['value']
-                
+
                 # Use update_member_data utility to process the update
                 await update_member_data(guild_name, member, field, value)
                 logger.info(f"Update approved for {member} in {guild_name}")
-                
+
                 # Delete the verification message
                 await message.delete()
                 # Remove from pending updates
                 del self.pending_updates[payload.message_id]
-                
+
             except Exception as e:
                 logger.error(f"Error processing verification: {e}", exc_info=True)
                 await channel.send(
                     f"Error processing verification: {e}", delete_after=10
                 )
-                
+
         elif str(payload.emoji) == "❌":
             try:
                 await message.delete()

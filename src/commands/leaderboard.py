@@ -31,7 +31,7 @@ class LeaderboardCog(commands.Cog):
         )
 
     def format_damage(self, damage: int) -> str:
-        if damage >= 1_000_000_000:
+        if damage >= 0:
             return f"{damage / 1_000_000_000:.2f}B"
         return str(damage)
 
