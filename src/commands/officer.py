@@ -95,6 +95,40 @@ class OfficerCommands(commands.Cog):
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
+    @member_group.command(name="delete")
+    @app_commands.autocomplete(name=member_autocomplete)
+    async def delete_member(
+        self,
+        interaction: discord.Interaction,
+        guild_name: str,
+        member_name: str
+    ):
+        """Delete a member from the guild."""
+        if not await self.has_permissions(interaction):
+            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+            return
+
+        try:
+            guild = await db.guilds.find_one({"_id": guild_name})
+            if not guild:
+                raise ValueError(f"Guild {guild_name} does not exist")
+
+            members = guild.get("members", {})
+            if member_name not in members:
+                raise ValueError(f"Member {member_name} not found in guild {guild_name}")
+
+            # Remove the member
+            await db.guilds.update_one(
+                {"_id": guild_name},
+                {"$unset": {f"members.{member_name}": ""}}
+            )
+
+            await interaction.response.send_message(f"Successfully removed member: {member_name} from guild: {guild_name}")
+        except ValueError as e:
+            await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"An unexpected error occurred: {str(e)}", ephemeral=True)
+
 async def setup(bot: commands.Bot):
     """Set up the OfficerCommands cog."""
     await bot.add_cog(OfficerCommands(bot))
