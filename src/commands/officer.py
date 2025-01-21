@@ -104,7 +104,7 @@ class OfficerCommands(commands.Cog):
         member_name: str
     ):
         """Delete a member from the guild."""
-        if not await self.has_permissions(interaction):
+        if not await self.is_officer(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
 
