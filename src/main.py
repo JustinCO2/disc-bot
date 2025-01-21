@@ -40,7 +40,6 @@ guild_obj = discord.Object(id=guild_id)
 @bot.event
 async def on_ready():
     try:
-        await bot.tree.clear_commands(guild=guild_obj)
         synced = await bot.tree.sync(guild=guild_obj)
         print(f"Cleared and synced {len(synced)} command(s).")
         for command in bot.tree.get_commands():
