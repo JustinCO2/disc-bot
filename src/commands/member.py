@@ -54,6 +54,10 @@ class MemberCommands(commands.Cog):
         self.pending_updates = {}
         logger.info("MemberCommands cog initialized")
 
+    guild_id = 1140429772531449886
+    guild_obj = discord.Object(id=guild_id)
+
+    @app_commands.guilds(discord.Object(id=guild_obj))
     @app_commands.command(name="submit_dmg", description="Submit damage image for verification")
     @app_commands.autocomplete(member=member_autocomplete, boss=boss_autocomplete)
     async def submit_dmg_command(
