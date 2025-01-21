@@ -55,7 +55,6 @@ class MemberCommands(commands.Cog):
         logger.info("MemberCommands cog initialized")
 
     @app_commands.command(name="submit_dmg", description="Submit damage image for verification")
-    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.autocomplete(member=member_autocomplete, boss=boss_autocomplete)
     async def submit_dmg_command(
         self,

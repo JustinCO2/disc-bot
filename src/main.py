@@ -32,11 +32,14 @@ class Bot(commands.Bot):
 
 bot = Bot()
 
+guild_id = 1140429772531449886
+guild_obj = discord.Object(id=guild_id)
+
 @bot.event
 async def on_ready():
     try:
-        bot.tree.clear_commands(guild=1140429772531449886)
-        synced = await bot.tree.sync(guild=discord.Object(id=1140429772531449886))
+        bot.tree.clear_commands(guild=guild_obj)
+        synced = await bot.tree.sync(guild=discord.Object(id=guild_obj))
         print(f"Cleared and synced {len(synced)} command(s).")
         for command in bot.tree.get_commands():
             print(f"Registered command: {command.name}")
@@ -51,18 +54,15 @@ async def list_commands(ctx):
         await ctx.send(f"Command: {command.name}, Description: {command.description}")
 
 async def load_extensions(bot):
-    extensions = [
-        "commands.admin",
-        "commands.member",
-        "commands.officer",
-        "commands.leaderboard"
-    ]
+    extensions = ["commands.admin", "commands.member", "commands.officer", "commands.leaderboard"]
     for ext in extensions:
         try:
             await bot.load_extension(ext)
             print(f"Loaded extension: {ext}")
         except Exception as e:
             print(f"Error loading extension {ext}: {e}")
+    print(f"Current commands: {bot.tree.get_commands()}")
+
 
 async def test_mongo():
     try:

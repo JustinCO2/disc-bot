@@ -33,7 +33,6 @@ class AdminCommands(commands.Cog):
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
     @app_commands.command()
-    @app_commands.guilds(discord.Object(id=1140429772531449886))
     async def create_guild(
         self,
         interaction: discord.Interaction,
@@ -70,7 +69,6 @@ class AdminCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @app_commands.command()
-    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.autocomplete(param=guild_param_autocomplete)
     async def edit_guild(
         self,
