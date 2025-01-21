@@ -79,7 +79,7 @@ class OfficerCommands(commands.Cog):
         interaction: discord.Interaction,
         name: str,
         boss: str,
-        new_damage: int
+        new_damage: str
     ):
         """Edit a member's damage for a boss."""
         if not self.is_officer(interaction):
@@ -88,7 +88,7 @@ class OfficerCommands(commands.Cog):
 
         try:
             if boss in ["rvd", "aod", "la"]:
-                new_damage = int(new_damage)
+                new_damage = parse_damage_input(new_damage)
 
             await edit_member(name, boss, new_damage)
             await interaction.response.send_message(f"Successfully updated {boss} for member: {name}")
