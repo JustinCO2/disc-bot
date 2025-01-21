@@ -32,10 +32,7 @@ class AdminCommands(commands.Cog):
         ]  # Update role IDs as needed
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
-    guild_id = 1140429772531449886
-    guild_obj = discord.Object(id=guild_id)
-
-    @app_commands.guilds(discord.Object(id=guild_obj))
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.command()
     async def create_guild(
         self,
@@ -72,7 +69,7 @@ class AdminCommands(commands.Cog):
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
-    @app_commands.guilds(discord.Object(id=guild_obj))
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.command()
     @app_commands.autocomplete(param=guild_param_autocomplete)
     async def edit_guild(
