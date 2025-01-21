@@ -27,18 +27,25 @@ intents.guilds = True
 DEV_GUILD_ID_1 = 1140429772531449886
 DEV_GUILD_ID_2 = 513561942984753154
 
-def restrict_to_dev_guilds(command):
-    """Decorator to restrict a command to development guilds."""
-    return commands.guilds(discord.Object(id=DEV_GUILD_ID_1), discord.Object(id=DEV_GUILD_ID_2))(command)
-
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
         await load_extensions(self)
+        await restrict_all_commands_to_dev_guilds(self)
 
 bot = Bot()
+
+async def restrict_all_commands_to_dev_guilds(bot):
+    """Restrict all slash commands to the two development guilds."""
+    dev_guilds = [discord.Object(id=DEV_GUILD_ID_1), discord.Object(id=DEV_GUILD_ID_2)]
+    for command in bot.tree.get_commands():
+        command.guilds = dev_guilds
+
+    # Sync commands with the specified guilds
+    await bot.tree.sync()
+    print("All slash commands restricted to development guilds.")
 
 @bot.event
 async def on_ready():
