@@ -51,6 +51,7 @@ class OfficerCommands(commands.Cog):
     member_group = app_commands.Group(name="member", description="Member management commands")
 
     @member_group.command(name="add")
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.autocomplete(guild=guild_autocomplete)
     async def member_add(
         self,
@@ -73,6 +74,7 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @member_group.command(name="edit")
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.autocomplete(name=member_autocomplete, boss=boss_autocomplete)
     async def member_edit(
         self,
@@ -96,6 +98,7 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @member_group.command(name="delete")
+    @app_commands.guilds(discord.Object(id=1140429772531449886))
     @app_commands.autocomplete(member_name=member_autocomplete)
     async def delete_member(
         self,
