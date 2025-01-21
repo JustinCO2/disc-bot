@@ -1,11 +1,16 @@
 from discord.ext import commands
 from discord import app_commands
 import discord
-import json
 from typing import Optional
 from commands.member import boss_autocomplete
 from utils.data import add_member, edit_member
-from commands.admin import guild_param_autocomplete
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+
+# MongoDB connection setup
+MONGO_URL = os.getenv("MONGO_URL")
+client = AsyncIOMotorClient(MONGO_URL)
+db = client["discord_bot"]
 
 class OfficerCommands(commands.Cog):
     """Officer commands for managing members."""
@@ -14,30 +19,32 @@ class OfficerCommands(commands.Cog):
         self.bot = bot
 
     def is_officer(self, interaction: discord.Interaction) -> bool:
-        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852, 1244616887250456577, 1244455889965023366, 1140634765297451113]  # Update role IDs as needed
-        # 1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364 | leader roles, star/celest/galaxy/moon/clown/jester
-        # 1248807669117227059, 1321313038804193351, 1321313793938030662, 1321314217734701126, 1321314303332192316, 1321314466062794852 | officer roles, same order
-        # 1244616887250456577, 1244455889965023366 | codeman, test server
-
+        allowed_roles = [
+            1248807293018046596, 1321315696801615872, 1321315779085467701,
+            1321315841366687785, 1321315919401586771, 1321315967120441364,
+            1248807669117227059, 1321313038804193351, 1321313793938030662,
+            1321314217734701126, 1321314303332192316, 1321314466062794852,
+            1244616887250456577, 1244455889965023366, 1140634765297451113
+        ]  # Update role IDs as needed
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
     async def guild_autocomplete(self, interaction: discord.Interaction, current: str):
-        with open('data/guilds.json', 'r') as f:
-            guilds = json.load(f)
+        """Autocomplete guild names."""
+        guilds = await db.guilds.find().to_list(None)
         return [
-            app_commands.Choice(name=guild, value=guild)
-            for guild in guilds.keys()
-            if current.lower() in guild.lower()
+            app_commands.Choice(name=guild["_id"], value=guild["_id"])
+            for guild in guilds if current.lower() in guild["_id"].lower()
         ]
 
     async def member_autocomplete(self, interaction: discord.Interaction, current: str):
-        with open('data/guilds.json', 'r') as f:
-            guilds = json.load(f)
-        members = [member for guild in guilds.values() for member in guild["members"].keys()]
+        """Autocomplete member names."""
+        guilds = await db.guilds.find().to_list(None)
+        members = [
+            member for guild in guilds for member in guild.get("members", {}).keys()
+        ]
         return [
             app_commands.Choice(name=member, value=member)
-            for member in members
-            if current.lower() in member.lower()
+            for member in members if current.lower() in member.lower()
         ]
 
     member_group = app_commands.Group(name="member", description="Member management commands")
@@ -53,6 +60,7 @@ class OfficerCommands(commands.Cog):
         aod: Optional[int] = 0,
         la: Optional[int] = 0
     ):
+        """Add a member to a guild."""
         if not self.is_officer(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
@@ -72,6 +80,7 @@ class OfficerCommands(commands.Cog):
         boss: str,
         new_damage: int
     ):
+        """Edit a member's damage for a boss."""
         if not self.is_officer(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
@@ -86,4 +95,5 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
 async def setup(bot: commands.Bot):
+    """Set up the OfficerCommands cog."""
     await bot.add_cog(OfficerCommands(bot))

@@ -1,64 +1,60 @@
 import discord
 from discord.ext import commands, tasks
-import json
-from typing import Dict
+from motor.motor_asyncio import AsyncIOMotorClient
 import logging
 import os
 
 logger = logging.getLogger('discord')
 
+# MongoDB connection setup
+MONGO_URL = os.getenv("MONGO_URL")
+client = AsyncIOMotorClient(MONGO_URL)
+db = client["discord_bot"]
+
 class LeaderboardCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.messages = self.load_message_ids()
+        self.messages = {}
         self.update_leaderboards.start()
 
-    def load_message_ids(self) -> Dict:
-        """Load saved message IDs from JSON file."""
-        try:
-            if os.path.exists('data/leaderboard_messages.json'):
-                with open('data/leaderboard_messages.json', 'r') as f:
-                    return json.load(f)
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading leaderboard_messages.json: {e}")
-            return {}
+    async def load_message_ids(self):
+        """Load saved message IDs from MongoDB."""
+        records = await db.leaderboard_messages.find().to_list(None)
+        self.messages = {record["_id"]: record["message_id"] for record in records}
 
-    def save_message_ids(self):
-        """Save message IDs to JSON file."""
-        try:
-            with open('data/leaderboard_messages.json', 'w') as f:
-                json.dump(self.messages, f, indent=4)
-        except Exception as e:
-            logger.error(f"Error saving leaderboard_messages.json: {e}")
+    async def save_message_id(self, guild_name: str, message_id: str):
+        """Save a message ID to MongoDB."""
+        await db.leaderboard_messages.update_one(
+            {"_id": guild_name},
+            {"$set": {"message_id": message_id}},
+            upsert=True
+        )
 
     def format_damage(self, damage: int) -> str:
-        if damage >= 1_000_000_000: return f"{damage/1_000_000_000:.2f}B"
+        if damage >= 1_000_000_000:
+            return f"{damage / 1_000_000_000:.2f}B"
         return str(damage)
 
-    def format_leaderboard(self, guild_name: str, guild_data: Dict) -> str:
-        # Column widths
+    def format_leaderboard(self, guild_name: str, guild_data: dict) -> str:
+        """Generate leaderboard text."""
         member_col_width = 7
         rvd_col_width = 5
         aod_col_width = 5
         la_col_width = 5
 
-        # Build leaderboard string
         leaderboard = ["```"]
-
-        # Header
         leaderboard.append(f"{guild_name} DMG Board\n")
-        leaderboard.append(f"{'#':<2} │ {'Members':<{member_col_width}} │ {'RVD':>{rvd_col_width}} │ {'AOD':>{aod_col_width}} │ {'LA':>{la_col_width}}")
+        leaderboard.append(
+            f"{'#':<2} │ {'Members':<{member_col_width}} │ {'RVD':>{rvd_col_width}} │ {'AOD':>{aod_col_width}} │ {'LA':>{la_col_width}}"
+        )
         leaderboard.append('─' * (2 + 3 + member_col_width + 3 + rvd_col_width + 3 + aod_col_width + 3 + la_col_width))
 
-        # Sort members by total damage
         sorted_members = sorted(
-            guild_data["members"].items(),
+            guild_data.get("members", {}).items(),
             key=lambda x: sum(x[1]["damages"].values()),
             reverse=True
         )
 
-        # Rows
         for idx, (member, data) in enumerate(sorted_members, 1):
             damages = data["damages"]
             leaderboard.append(
@@ -71,28 +67,26 @@ class LeaderboardCog(commands.Cog):
         leaderboard.append("```")
         return "\n".join(leaderboard)
 
-    async def load_guilds(self) -> Dict:
-        try:
-            with open('data/guilds.json', 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error loading guilds.json: {e}")
-            return {}
+    async def load_guilds(self) -> dict:
+        """Load all guilds from MongoDB."""
+        guilds = {}
+        async for guild in db.guilds.find():
+            guilds[guild["_id"]] = guild
+        return guilds
 
     async def initialize_leaderboards(self):
         logger.info("Initializing leaderboards...")
+        await self.load_message_ids()
         guilds = await self.load_guilds()
-        
+
         for guild_name, guild_data in guilds.items():
             try:
                 channel_id = int(guild_data["channels"]["leaderboard"])
                 channel = self.bot.get_channel(channel_id)
-                
                 if not channel:
-                    logger.error(f"Could not find channel {channel_id} for guild {guild_name}")
+                    logger.error(f"Channel {channel_id} not found for guild {guild_name}")
                     continue
 
-                # Try to fetch existing message first
                 if guild_name in self.messages:
                     try:
                         await channel.fetch_message(int(self.messages[guild_name]))
@@ -104,23 +98,20 @@ class LeaderboardCog(commands.Cog):
                 content = self.format_leaderboard(guild_name, guild_data)
                 message = await channel.send(content)
                 self.messages[guild_name] = str(message.id)
-                self.save_message_ids()
+                await self.save_message_id(guild_name, str(message.id))
                 logger.info(f"Created leaderboard for {guild_name} in channel {channel_id}")
-                
             except Exception as e:
                 logger.error(f"Error creating leaderboard for {guild_name}: {e}")
 
-    async def update_guild_leaderboard(self, guild_name: str, guild_data: Dict):
+    async def update_guild_leaderboard(self, guild_name: str, guild_data: dict):
         try:
             channel_id = int(guild_data["channels"]["leaderboard"])
             channel = self.bot.get_channel(channel_id)
-            
             if not channel:
-                logger.error(f"Channel {channel_id} not found for {guild_name}")
+                logger.error(f"Channel {channel_id} not found for guild {guild_name}")
                 return
 
             content = self.format_leaderboard(guild_name, guild_data)
-            
             message = None
             if guild_name in self.messages:
                 try:
@@ -135,15 +126,14 @@ class LeaderboardCog(commands.Cog):
             else:
                 message = await channel.send(content)
                 self.messages[guild_name] = str(message.id)
-                self.save_message_ids()
+                await self.save_message_id(guild_name, str(message.id))
                 logger.info(f"Created new leaderboard for {guild_name}")
-                
         except Exception as e:
             logger.error(f"Error updating leaderboard for {guild_name}: {e}")
 
     @tasks.loop(minutes=1)
     async def update_leaderboards(self):
-        logger.info("Running scheduled leaderboard update")
+        logger.info("Running scheduled leaderboard update...")
         guilds = await self.load_guilds()
         for guild_name, guild_data in guilds.items():
             await self.update_guild_leaderboard(guild_name, guild_data)
@@ -152,21 +142,6 @@ class LeaderboardCog(commands.Cog):
     async def before_update(self):
         await self.bot.wait_until_ready()
         await self.initialize_leaderboards()
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user.bot: return
-            
-        member_cog = self.bot.get_cog('MemberCommands')
-        if not member_cog or reaction.message.id not in member_cog.pending_updates:
-            return
-            
-        check_reactions = discord.utils.get(reaction.message.reactions, emoji="✅")
-        if check_reactions and check_reactions.count >= 2:
-            update_info = member_cog.pending_updates[reaction.message.id]
-            guilds = await self.load_guilds()
-            if update_info['guild'] in guilds:
-                await self.update_guild_leaderboard(update_info['guild'], guilds[update_info['guild']])
 
 async def setup(bot):
     await bot.add_cog(LeaderboardCog(bot))

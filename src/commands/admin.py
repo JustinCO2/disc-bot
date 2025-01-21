@@ -2,15 +2,20 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 from typing import Optional
-from utils.data import create_guild, edit_guild
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+
+# MongoDB connection setup
+MONGO_URL = os.getenv("MONGO_URL")
+client = AsyncIOMotorClient(MONGO_URL)
+db = client["discord_bot"]
 
 async def guild_param_autocomplete(interaction: discord.Interaction, current: str):
     """Autocomplete for guild parameters."""
     fields = ["announcements", "leaderboard", "verification", "name", "role_id"]
     return [
         app_commands.Choice(name=field, value=field)
-        for field in fields
-        if current.lower() in field.lower()
+        for field in fields if current.lower() in field.lower()
     ]
 
 class AdminCommands(commands.Cog):
@@ -20,9 +25,11 @@ class AdminCommands(commands.Cog):
         self.bot = bot
 
     async def has_permissions(self, interaction: discord.Interaction) -> bool:
-        allowed_roles = [1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364, 1244616887250456577, 1244455889965023366]  # Update role IDs as needed
-        # 1248807293018046596, 1321315696801615872, 1321315779085467701, 1321315841366687785, 1321315919401586771, 1321315967120441364 | leader roles, star/celest/galaxy/moon/clown/jester
-        # 1244616887250456577, 1244455889965023366 | codeman, test server
+        allowed_roles = [
+            1248807293018046596, 1321315696801615872, 1321315779085467701,
+            1321315841366687785, 1321315919401586771, 1321315967120441364,
+            1244616887250456577, 1244455889965023366
+        ]  # Update role IDs as needed
         return any(role.id in allowed_roles for role in interaction.user.roles)
 
     @app_commands.command()
@@ -35,18 +42,28 @@ class AdminCommands(commands.Cog):
         verification_channel: discord.TextChannel,
         member_role: discord.Role
     ):
+        """Create a new guild in the database."""
         if not await self.has_permissions(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
 
         try:
-            await create_guild(
-                name,
-                str(announce_channel.id),
-                str(leaderboard_channel.id),
-                str(verification_channel.id),
-                str(member_role.id)
-            )
+            guild = {
+                "_id": name,
+                "channels": {
+                    "announcements": str(announce_channel.id),
+                    "leaderboard": str(leaderboard_channel.id),
+                    "verification": str(verification_channel.id),
+                },
+                "role_id": str(member_role.id),
+                "members": {}
+            }
+
+            existing_guild = await db.guilds.find_one({"_id": name})
+            if existing_guild:
+                raise ValueError(f"Guild {name} already exists")
+
+            await db.guilds.insert_one(guild)
             await interaction.response.send_message(f"Successfully created guild: {name}")
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
@@ -61,23 +78,28 @@ class AdminCommands(commands.Cog):
         new_channel: Optional[discord.TextChannel] = None,
         new_role: Optional[discord.Role] = None
     ):
-        """Edit guild parameters."""
+        """Edit guild parameters in the database."""
         if not await self.has_permissions(interaction):
             await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
             return
 
         try:
+            guild = await db.guilds.find_one({"_id": name})
+            if not guild:
+                raise ValueError(f"Guild {name} does not exist")
+
             if param in ["announcements", "leaderboard", "verification"]:
                 if not new_channel:
                     raise ValueError("Channel parameter requires a new channel")
-                await edit_guild(name, param, str(new_channel.id))
+                update_field = f"channels.{param}"
+                await db.guilds.update_one({"_id": name}, {"$set": {update_field: str(new_channel.id)}})
             elif param == "role_id":
                 if not new_role:
                     raise ValueError("Role parameter requires a new role")
-                await edit_guild(name, param, str(new_role.id))
+                await db.guilds.update_one({"_id": name}, {"$set": {"role_id": str(new_role.id)}})
             else:
                 raise ValueError(f"Invalid parameter: {param}")
-                
+
             await interaction.response.send_message(f"Successfully updated {param} for guild: {name}")
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)

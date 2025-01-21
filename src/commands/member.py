@@ -1,7 +1,6 @@
 from discord.ext import commands
 from discord import app_commands
 import discord
-import json
 import logging
 from typing import Optional
 from utils.data import (
@@ -11,18 +10,28 @@ from utils.data import (
     find_guild_by_member,
     find_guild_by_channel
 )
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('discord')
 logger.setLevel(logging.INFO)
 
+# MongoDB connection setup
+MONGO_URL = os.getenv("MONGO_URL")
+client = AsyncIOMotorClient(MONGO_URL)
+db = client["discord_bot"]
+
 async def member_autocomplete(interaction: discord.Interaction, current: str):
     """Provide autocomplete for members."""
     print(f"Autocomplete triggered. Input: '{current}'")
     try:
-        with open('data/guilds.json', 'r') as f:
-            guilds = json.load(f)
-        members = [member for guild in guilds.values() for member in guild["members"].keys()]
+        # Fetch members from MongoDB
+        guilds = await db.guilds.find().to_list(None)
+        members = [
+            member for guild in guilds
+            for member in guild.get("members", {}).keys()
+        ]
         return [
             app_commands.Choice(name=member, value=member)
             for member in members if current.lower() in member.lower()
@@ -64,7 +73,7 @@ class MemberCommands(commands.Cog):
                 int(submission["verification_channel_id"])
             )
             if not verification_channel:
-                logger.warning(f"Verification channel not found")
+                logger.warning("Verification channel not found")
                 await interaction.response.send_message(
                     "Verification channel not found.", ephemeral=True
                 )
@@ -107,7 +116,6 @@ class MemberCommands(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """Handle reactions to verification messages."""
-        # Ignore bot's own reactions
         if payload.user_id == self.bot.user.id:
             return
 

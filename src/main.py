@@ -1,17 +1,22 @@
 import discord
 from discord.ext import commands
-import json
 import os
 from dotenv import load_dotenv
 import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
 from utils.data import validate_guilds_structure
 
 load_dotenv()
 
-with open('config/config.json', 'r') as config_file:
-    config = json.load(config_file)
-
+# Load MongoDB URL and Discord Token
+MONGO_URL = os.getenv("MONGO_URL")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+
+# MongoDB connection setup
+client = AsyncIOMotorClient(MONGO_URL)
+db = client["discord_bot"]
+
+# Discord bot intents setup
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -22,7 +27,7 @@ intents.guilds = True
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
-        
+
     async def setup_hook(self):
         await load_extensions(self)
 
@@ -34,7 +39,7 @@ async def on_ready():
     
     try:
         print("Validating guild data...")
-        validate_guilds_structure()
+        await validate_guilds_structure(db)  # Pass MongoDB connection to validation
         print("Guild data validation complete.")
     except Exception as e:
         print(f"Validation error: {e}")
