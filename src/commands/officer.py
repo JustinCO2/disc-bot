@@ -48,8 +48,11 @@ class OfficerCommands(commands.Cog):
             for member in members if current.lower() in member.lower()
         ]
 
-    member_group = app_commands.Group(name="member", description="Member management commands")
-    @app_commands.guilds(discord.Object(id=1140429772531449886))
+    # Define a top-level group (no guild decorator here):
+    member_group = app_commands.Group(
+        name="member",
+        description="Member management commands"
+    )
 
     @member_group.command(name="add")
     @app_commands.autocomplete(guild=guild_autocomplete)
@@ -64,12 +67,17 @@ class OfficerCommands(commands.Cog):
     ):
         """Add a member to a guild."""
         if not self.is_officer(interaction):
-            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", 
+                ephemeral=True
+            )
             return
 
         try:
             await add_member(name, guild, rvd, aod, la)
-            await interaction.response.send_message(f"Successfully added {name} to {guild}")
+            await interaction.response.send_message(
+                f"Successfully added {name} to {guild}"
+            )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
@@ -84,7 +92,10 @@ class OfficerCommands(commands.Cog):
     ):
         """Edit a member's damage for a boss."""
         if not self.is_officer(interaction):
-            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", 
+                ephemeral=True
+            )
             return
 
         try:
@@ -92,7 +103,9 @@ class OfficerCommands(commands.Cog):
                 new_damage = parse_damage_input(new_damage)
 
             await edit_member(name, boss, new_damage)
-            await interaction.response.send_message(f"Successfully updated {boss} for member: {name}")
+            await interaction.response.send_message(
+                f"Successfully updated {boss} for member: {name}"
+            )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
@@ -105,18 +118,23 @@ class OfficerCommands(commands.Cog):
         member_name: str
     ):
         """Delete a member from the guild."""
-        if not await self.is_officer(interaction):
-            await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+        if not self.is_officer(interaction):
+            await interaction.response.send_message(
+                "You don't have permission to use this command.", 
+                ephemeral=True
+            )
             return
 
         try:
-            guild = await db.guilds.find_one({"_id": guild_name})
-            if not guild:
+            guild_data = await db.guilds.find_one({"_id": guild_name})
+            if not guild_data:
                 raise ValueError(f"Guild {guild_name} does not exist")
 
-            members = guild.get("members", {})
+            members = guild_data.get("members", {})
             if member_name not in members:
-                raise ValueError(f"Member {member_name} not found in guild {guild_name}")
+                raise ValueError(
+                    f"Member {member_name} not found in guild {guild_name}"
+                )
 
             # Remove the member
             await db.guilds.update_one(
@@ -124,12 +142,22 @@ class OfficerCommands(commands.Cog):
                 {"$unset": {f"members.{member_name}": ""}}
             )
 
-            await interaction.response.send_message(f"Successfully removed member: {member_name} from guild: {guild_name}")
+            await interaction.response.send_message(
+                f"Successfully removed member: {member_name} from guild: {guild_name}"
+            )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(f"An unexpected error occurred: {str(e)}", ephemeral=True)
+            await interaction.response.send_message(
+                f"An unexpected error occurred: {str(e)}", 
+                ephemeral=True
+            )
 
 async def setup(bot: commands.Bot):
-    """Set up the OfficerCommands cog."""
-    await bot.add_cog(OfficerCommands(bot))
+    """Set up the OfficerCommands cog and register its group for a single guild."""
+    officer_cog = OfficerCommands(bot)
+    await bot.add_cog(officer_cog)
+    bot.tree.add_command(
+        officer_cog.member_group, 
+        guild=discord.Object(id=1140429772531449886)
+    )
