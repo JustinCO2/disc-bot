@@ -30,17 +30,15 @@ def parse_damage_input(damage_str):
     Parses damage input string and returns the value in raw numbers (float).
     Accepts inputs in formats like "8.88b", "8880M", or raw numbers.
     """
-    damage_str = damage_str.lower().strip()
-    if damage_str.endswith('b'):
-        return float(damage_str[:-1]) * 1e9
-    if damage_str.endswith('B'):
-        return float(damage_str[:-1]) * 1e9    
-    if damage_str.endswith('M'):
-        return float(damage_str[:-1]) * 1e6    
-    elif damage_str.endswith('m'):
-        return float(damage_str[:-1]) * 1e6
-    else:
+    try:
+        damage_str = damage_str.lower().strip()
+        if damage_str.endswith(('b', 'm')):
+            multiplier = 1e9 if damage_str.endswith('b') else 1e6
+            return float(damage_str[:-1]) * multiplier
         return float(damage_str)
+    except ValueError:
+        raise ValueError("Invalid damage input format")
+
 
 async def create_guild(name: str, announce_id: str, leaderboard_id: str, verif_id: str, role_id: str):
     """Create a new guild using the template."""
