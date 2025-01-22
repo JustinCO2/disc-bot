@@ -110,7 +110,7 @@ class OfficerCommands(commands.Cog):
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
 
     @member_group.command(name="delete")
-    @app_commands.autocomplete(member_name=member_autocomplete)
+    @app_commands.autocomplete(member_name=member_autocomplete, guild_name=guild_autocomplete)
     async def delete_member(
         self,
         interaction: discord.Interaction,
