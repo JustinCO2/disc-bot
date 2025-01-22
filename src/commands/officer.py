@@ -19,6 +19,7 @@ class OfficerCommands(commands.Cog):
         self.bot = bot
 
     def is_officer(self, interaction: discord.Interaction) -> bool:
+        # List of officer role IDs
         allowed_roles = [
             1248807293018046596, 1321315696801615872, 1321315779085467701,
             1321315841366687785, 1321315919401586771, 1321315967120441364,
@@ -26,8 +27,33 @@ class OfficerCommands(commands.Cog):
             1321314217734701126, 1321314303332192316, 1321314466062794852,
             1244616887250456577, 1244455889965023366, 1140634765297451113,
             1217354048416645150
-        ]  # Update role IDs as needed
-        return any(role.id in allowed_roles for role in interaction.user.roles)
+        ]
+
+        # Extract roles from the user
+        member = interaction.user
+        # Note: Make sure your bot has the "Server Members Intent" enabled, 
+        # so 'interaction.user' is actually a Member with roles.
+        print(f"[DEBUG] User '{member}' (ID: {member.id}) attempted an Officer command.")
+
+        # Print out all roles the user currently has:
+        if hasattr(member, "roles"):
+            user_roles = member.roles  # This is a list of discord.Role objects
+            print("[DEBUG] Roles for user:")
+            for r in user_roles:
+                print(f"       - {r.name} (ID: {r.id})")
+        else:
+            print("[DEBUG] 'interaction.user.roles' not found or empty. Check your intents!")
+
+        # Check if any of the user's role IDs is in the allowed_roles list
+        # and debug-print whichever role grants them permission
+        if hasattr(member, "roles"):
+            for role in member.roles:
+                if role.id in allowed_roles:
+                    print(f"[DEBUG] Permission granted by role '{role.name}' (ID: {role.id}).")
+                    return True
+
+        print("[DEBUG] No matching officer role found. Permission denied.")
+        return False
 
     async def guild_autocomplete(self, interaction: discord.Interaction, current: str):
         """Autocomplete guild names."""
@@ -66,6 +92,8 @@ class OfficerCommands(commands.Cog):
         la: Optional[int] = 0
     ):
         """Add a member to a guild."""
+        print(f"[DEBUG] Command '/member add' called by {interaction.user.display_name} (ID: {interaction.user.id}).")
+
         if not self.is_officer(interaction):
             await interaction.response.send_message(
                 "You don't have permission to use this command.", 
@@ -91,6 +119,8 @@ class OfficerCommands(commands.Cog):
         new_damage: str
     ):
         """Edit a member's damage for a boss."""
+        print(f"[DEBUG] Command '/member edit' called by {interaction.user.display_name} (ID: {interaction.user.id}).")
+
         if not self.is_officer(interaction):
             await interaction.response.send_message(
                 "You don't have permission to use this command.", 
@@ -118,6 +148,8 @@ class OfficerCommands(commands.Cog):
         member_name: str
     ):
         """Delete a member from the guild."""
+        print(f"[DEBUG] Command '/member delete' called by {interaction.user.display_name} (ID: {interaction.user.id}).")
+
         if not self.is_officer(interaction):
             await interaction.response.send_message(
                 "You don't have permission to use this command.", 
@@ -152,6 +184,7 @@ class OfficerCommands(commands.Cog):
                 f"An unexpected error occurred: {str(e)}", 
                 ephemeral=True
             )
+
 
 async def setup(bot: commands.Bot):
     """Set up the OfficerCommands cog and register its group for a single guild."""
