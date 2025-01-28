@@ -8,6 +8,6 @@ pytest
 
 jinja2
 
-Pillow # image height and width
-paddlepaddle
-paddleocr
+# Pillow # image height and width
+# paddlepaddle
+# paddleocr
