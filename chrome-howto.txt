@@ -1,0 +1,7 @@
+Install dependencies:
+
+    xargs -a dependencies.txt sudo apt-get install -y
+
+Download and setup chrome binaries
+
+    python src/utils/setup_chrome_testing_binaries.py
