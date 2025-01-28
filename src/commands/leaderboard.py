@@ -5,9 +5,6 @@ import logging
 import os
 from utils.leaderboard_chrome import create_damage_board
 
-# ---------------- NEW IMPORT FOR IMAGE GENERATION ----------------
-from image_generator import create_damage_board
-
 logger = logging.getLogger('discord')
 
 # MongoDB connection setup
