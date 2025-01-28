@@ -150,7 +150,7 @@ class MemberCommands(commands.Cog):
                 del self.pending_updates[payload.message_id]
 
                 await interaction.response.send_message(
-                f"Successfully updated damage for: {member_name} to: {value}"
+                f"Successfully updated damage for: {member} to: {value}"
             )
 
             except Exception as e:
