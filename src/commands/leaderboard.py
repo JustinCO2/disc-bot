@@ -3,6 +3,10 @@ from discord.ext import commands, tasks
 from motor.motor_asyncio import AsyncIOMotorClient
 import logging
 import os
+from utils.leaderboard_chrome import create_damage_board
+
+# ---------------- NEW IMPORT FOR IMAGE GENERATION ----------------
+from image_generator import create_damage_board
 
 logger = logging.getLogger('discord')
 
@@ -30,13 +34,21 @@ class LeaderboardCog(commands.Cog):
             upsert=True
         )
 
+    # --------------------------------------------------------------------------
+    # The old method to format damage text, kept in case you still need it for 
+    # something else. If purely unused, you can remove or leave it as is.
+    # --------------------------------------------------------------------------
     def format_damage(self, damage: int) -> str:
         if damage >= 1:
             return f"{damage / 1_000_000_000:.2f}B"
         return str(damage)
 
+    # --------------------------------------------------------------------------
+    # The old method to create a text-based leaderboard, commented out for now.
+    # --------------------------------------------------------------------------
+    """
     def format_leaderboard(self, guild_name: str, guild_data: dict) -> str:
-        """Generate leaderboard text."""
+        # Generate leaderboard text.
         member_col_width = 7
         rvd_col_width = 5
         aod_col_width = 5
@@ -66,6 +78,7 @@ class LeaderboardCog(commands.Cog):
 
         leaderboard.append("```")
         return "\n".join(leaderboard)
+    """
 
     async def load_guilds(self) -> dict:
         """Load all guilds from MongoDB."""
@@ -89,17 +102,27 @@ class LeaderboardCog(commands.Cog):
 
                 if guild_name in self.messages:
                     try:
+                        # Attempt to fetch the existing leaderboard message
                         await channel.fetch_message(int(self.messages[guild_name]))
                         logger.info(f"Found existing leaderboard for {guild_name}")
                         continue
                     except (discord.NotFound, discord.HTTPException):
                         logger.info(f"Stored message for {guild_name} not found, creating new one")
 
-                content = self.format_leaderboard(guild_name, guild_data)
-                message = await channel.send(content)
+                # ---------------- NEW IMAGE GENERATION ----------------
+                # Create the damage board image (and HTML if needed).
+                screenshot_path, html_path = create_damage_board(guild_name, guild_data)
+                
+                # Send the generated image in a new message.
+                file = discord.File(screenshot_path, filename=os.path.basename(screenshot_path))
+                message = await channel.send(file=file)
+                
+                # Store the new message ID for future edits
                 self.messages[guild_name] = str(message.id)
                 await self.save_message_id(guild_name, str(message.id))
-                logger.info(f"Created leaderboard for {guild_name} in channel {channel_id}")
+
+                logger.info(f"Created leaderboard image for {guild_name} in channel {channel_id}")
+
             except Exception as e:
                 logger.error(f"Error creating leaderboard for {guild_name}: {e}")
 
@@ -111,7 +134,15 @@ class LeaderboardCog(commands.Cog):
                 logger.error(f"Channel {channel_id} not found for guild {guild_name}")
                 return
 
+            # ---------------- NEW IMAGE GENERATION ----------------
+            # Create the damage board image (and HTML if needed).
+            screenshot_path, html_path = create_damage_board(guild_name, guild_data)
+
+            # Comment out the text-based content code:
+            """
             content = self.format_leaderboard(guild_name, guild_data)
+            """
+
             message = None
             if guild_name in self.messages:
                 try:
@@ -120,14 +151,20 @@ class LeaderboardCog(commands.Cog):
                     logger.info(f"Stored message for {guild_name} not found, creating new one")
                     message = None
 
+            # Prepare the new file to send
+            file = discord.File(screenshot_path, filename=os.path.basename(screenshot_path))
+
             if message:
-                await message.edit(content=content)
-                logger.info(f"Updated existing leaderboard for {guild_name}")
+                # Edit the existing message by removing text and updating attachment
+                await message.edit(content="", attachments=[file])
+                logger.info(f"Updated existing leaderboard image for {guild_name}")
             else:
-                message = await channel.send(content)
+                # Send a new message if none exists
+                message = await channel.send(file=file)
                 self.messages[guild_name] = str(message.id)
                 await self.save_message_id(guild_name, str(message.id))
-                logger.info(f"Created new leaderboard for {guild_name}")
+                logger.info(f"Created new leaderboard image for {guild_name}")
+
         except Exception as e:
             logger.error(f"Error updating leaderboard for {guild_name}: {e}")
 

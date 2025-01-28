@@ -149,6 +149,10 @@ class MemberCommands(commands.Cog):
                 # Remove from pending updates
                 del self.pending_updates[payload.message_id]
 
+                await interaction.response.send_message(
+                f"Successfully updated damage for: {member_name} to: {value}"
+            )
+
             except Exception as e:
                 logger.error(f"Error processing verification: {e}", exc_info=True)
                 await channel.send(
