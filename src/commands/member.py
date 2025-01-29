@@ -155,7 +155,7 @@ class MemberCommands(commands.Cog):
                 guild_name = update_info['guild']
                 member = update_info['member']
                 field = update_info['field']
-                value = update_info['value']
+                value = update_info['value']  # Expected: (boss, damage)
 
                 # Use update_member_data utility to process the update
                 await update_member_data(guild_name, member, field, value)
@@ -166,11 +166,21 @@ class MemberCommands(commands.Cog):
                 # Remove from pending updates
                 del self.pending_updates[payload.message_id]
 
-                new_val = format_damage(value)
+                # Format damage and show change
+                old_boss, old_damage = value
+                new_boss, new_damage = format_damage(value)
+
+                if old_boss != new_boss:
+                    logger.warning("Boss name mismatch in format_damage output!")  # Debugging check
 
                 await channel.send(
-                f"Successfully updated damage for: {member} to: {new_val}"
-            )
+                    f"Successfully updated damage for: {member}\n"
+                    f"**{old_boss}**: `{old_damage}` → `{new_damage}`"
+                )
+
+    except Exception as e:
+        logger.error(f"Error processing verification: {e}")
+
 
             except Exception as e:
                 logger.error(f"Error processing verification: {e}", exc_info=True)
