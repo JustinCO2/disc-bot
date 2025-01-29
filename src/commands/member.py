@@ -3,7 +3,6 @@ from discord import app_commands
 import discord
 import logging
 from typing import Optional
-from leaderboard import format_damage
 from utils.data import (
     submit_dmg,
     submit_relics,
@@ -21,6 +20,11 @@ logger = logging.getLogger(__name__)
 MONGO_URL = os.getenv("MONGO_URL")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client["discord_bot"]
+
+def format_damage(damage: int) -> str:
+        if damage >= 1:
+            return f"{damage / 1_000_000_000:.2f}B"
+        return str(damage)
 
 async def member_autocomplete(interaction: discord.Interaction, current: str):
     """Provide autocomplete for members."""
@@ -150,8 +154,10 @@ class MemberCommands(commands.Cog):
                 # Remove from pending updates
                 del self.pending_updates[payload.message_id]
 
+                new_val = format_damage(value)
+
                 await channel.send(
-                f"Successfully updated damage for: {member} to: {format_damage(value)}"
+                f"Successfully updated damage for: {member} to: {new_val}"
             )
 
             except Exception as e:
