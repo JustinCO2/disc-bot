@@ -149,7 +149,7 @@ class MemberCommands(commands.Cog):
                 # Remove from pending updates
                 del self.pending_updates[payload.message_id]
 
-                await interaction.response.send_message(
+                await channel.send(
                 f"Successfully updated damage for: {member} to: {value}"
             )
 
