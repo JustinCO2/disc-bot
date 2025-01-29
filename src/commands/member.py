@@ -25,14 +25,16 @@ def format_damage(damage) -> str:
     if isinstance(damage, tuple):  # Handle tuple case
         damage = damage[0]
 
-    try:
-        damage = int(damage)  # Convert str to int if necessary
-    except ValueError:
-        raise TypeError(f"Invalid damage value: {damage}, cannot convert to int.")
+    if not isinstance(damage, (int, float, str)):  # Ensure it's a valid type
+        raise TypeError(f"Invalid damage type: {type(damage)}, expected int, float, or str.")
 
-    if damage >= 1:
+    if isinstance(damage, str) and damage.isdigit():  # Convert only if it's numeric
+        damage = int(damage)
+
+    if isinstance(damage, (int, float)) and damage >= 1:
         return f"{damage / 1_000_000_000:.2f}B"
-    return str(damage)
+
+    return str(damage)  # Ensure it always returns a string
 
 async def member_autocomplete(interaction: discord.Interaction, current: str):
     """Provide autocomplete for members."""
