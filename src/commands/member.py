@@ -21,10 +21,17 @@ MONGO_URL = os.getenv("MONGO_URL")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client["discord_bot"]
 
-def format_damage(damage: int) -> str:
-        if damage >= 1:
-            return f"{damage / 1_000_000_000:.2f}B"
-        return str(damage)
+def format_damage(damage) -> str:
+    if isinstance(damage, tuple):
+        damage = damage[0]  
+
+    if not isinstance(damage, (int, float)):
+        raise TypeError(f"Invalid damage type: {type(damage)} expected int or float")
+
+    if damage >= 1:
+        return f"{damage / 1_000_000_000:.2f}B"
+    return str(damage)
+
 
 async def member_autocomplete(interaction: discord.Interaction, current: str):
     """Provide autocomplete for members."""
