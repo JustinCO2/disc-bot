@@ -3,6 +3,7 @@ from discord import app_commands
 import discord
 import logging
 from typing import Optional
+from leaderboard import format_damage
 from utils.data import (
     submit_dmg,
     submit_relics,
@@ -150,7 +151,7 @@ class MemberCommands(commands.Cog):
                 del self.pending_updates[payload.message_id]
 
                 await channel.send(
-                f"Successfully updated damage for: {member} to: {value}"
+                f"Successfully updated damage for: {member} to: {format_damage(value)}"
             )
 
             except Exception as e:
