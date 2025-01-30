@@ -1,6 +1,10 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 MONGO_URL = os.getenv("MONGO_URL")
 client = AsyncIOMotorClient(MONGO_URL)
