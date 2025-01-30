@@ -128,12 +128,27 @@ class OfficerCommands(commands.Cog):
             return
 
         try:
+            # Get the guild name from interaction
+            guild_id = interaction.guild_id
+            if not guild_id:
+                await interaction.response.send_message("Error: Could not determine guild.", ephemeral=True)
+                return
+
+            guild_data = await db.guilds.find_one({"_id": str(guild_id)})
+            if not guild_data:
+                await interaction.response.send_message("Error: Guild not found in database.", ephemeral=True)
+                return
+            
+            guild_name = guild_data["_id"]  # Get the guild name from database
+
             if boss in ["rvd", "aod", "la"]:
                 new_damage = parse_damage_input(new_damage)
 
-            await edit_member(self.bot, name, boss, new_damage)
+            # 🔹 Now we pass `guild_name` correctly
+            await edit_member(self.bot, guild_name, name, boss, new_damage)
+
             await interaction.response.send_message(
-                f"Successfully updated {boss} for member: {name}"
+                f"Successfully updated {boss} for member: {name} in {guild_name}"
             )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
