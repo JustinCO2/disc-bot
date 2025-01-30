@@ -178,13 +178,11 @@ class MemberCommands(commands.Cog):
                 )
             except Exception as e:
                 logger.error(f"Error processing verification: {e}")
-
-
-                    except Exception as e:
-                        logger.error(f"Error processing verification: {e}", exc_info=True)
-                        await channel.send(
-                            f"Error processing verification: {e}", delete_after=10
-                        )
+                except Exception as e:
+                    logger.error(f"Error processing verification: {e}", exc_info=True)
+                    await channel.send(
+                        f"Error processing verification: {e}", delete_after=10
+                    )
 
                 elif str(payload.emoji) == "❌":
                     try:
