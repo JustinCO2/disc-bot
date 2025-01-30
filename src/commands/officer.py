@@ -34,9 +34,6 @@ class OfficerCommands(commands.Cog):
         # so 'interaction.user' is actually a Member with roles.
         print(f"[DEBUG] User '{member}' (ID: {member.id}) attempted an Officer command.")
 
-        else:
-            print("[DEBUG] 'interaction.user.roles' not found or empty. Check your intents!")
-
         # Check if any of the user's role IDs is in the allowed_roles list
         # and debug-print whichever role grants them permission
         if hasattr(member, "roles"):
@@ -139,7 +136,6 @@ class OfficerCommands(commands.Cog):
             )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
-
 
     @member_group.command(name="delete")
     @app_commands.autocomplete(member_name=member_autocomplete, guild_name=guild_autocomplete)
