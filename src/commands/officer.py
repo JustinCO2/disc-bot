@@ -34,12 +34,6 @@ class OfficerCommands(commands.Cog):
         # so 'interaction.user' is actually a Member with roles.
         print(f"[DEBUG] User '{member}' (ID: {member.id}) attempted an Officer command.")
 
-        # Print out all roles the user currently has:
-        if hasattr(member, "roles"):
-            user_roles = member.roles  # This is a list of discord.Role objects
-            print("[DEBUG] Roles for user:")
-            for r in user_roles:
-                print(f"       - {r.name} (ID: {r.id})")
         else:
             print("[DEBUG] 'interaction.user.roles' not found or empty. Check your intents!")
 
@@ -128,23 +122,16 @@ class OfficerCommands(commands.Cog):
             return
 
         try:
-            # Get the guild name from interaction
-            guild_id = interaction.guild_id
-            if not guild_id:
-                await interaction.response.send_message("Error: Could not determine guild.", ephemeral=True)
+            # 🔹 Find the guild the member belongs to
+            guild_name = await find_guild_by_member(name)
+            if not guild_name:
+                await interaction.response.send_message(f"Error: Member '{name}' not found in any guild.", ephemeral=True)
                 return
-
-            guild_data = await db.guilds.find_one({"_id": str(guild_id)})
-            if not guild_data:
-                await interaction.response.send_message("Error: Guild not found in database.", ephemeral=True)
-                return
-            
-            guild_name = guild_data["_id"]  # Get the guild name from database
 
             if boss in ["rvd", "aod", "la"]:
                 new_damage = parse_damage_input(new_damage)
 
-            # 🔹 Now we pass `guild_name` correctly
+            # 🔹 Now we pass `guild_name` retrieved dynamically
             await edit_member(self.bot, guild_name, name, boss, new_damage)
 
             await interaction.response.send_message(
@@ -152,6 +139,7 @@ class OfficerCommands(commands.Cog):
             )
         except ValueError as e:
             await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
+
 
     @member_group.command(name="delete")
     @app_commands.autocomplete(member_name=member_autocomplete, guild_name=guild_autocomplete)
