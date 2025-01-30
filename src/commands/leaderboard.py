@@ -16,7 +16,6 @@ class LeaderboardCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.messages = {}
-        self.update_leaderboards.start()
 
     async def load_message_ids(self):
         """Load saved message IDs from MongoDB."""

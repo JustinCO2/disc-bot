@@ -176,21 +176,21 @@ class MemberCommands(commands.Cog):
                     f"Successfully updated damage for: {member}\n"
                     f"**{old_boss}**: `{old_damage}` → `{new_damage}`"
                 )
-            except Exception as e:
-                logger.error(f"Error processing verification: {e}")
-                except Exception as e:
-                    logger.error(f"Error processing verification: {e}", exc_info=True)
-                    await channel.send(
-                        f"Error processing verification: {e}", delete_after=10
-                    )
 
-                elif str(payload.emoji) == "❌":
-                    try:
-                        await message.delete()
-                        del self.pending_updates[payload.message_id]
-                        logger.info(f"Submission rejected for {update_info['member']}")
-                    except Exception as e:
-                        logger.error(f"Error processing rejection: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Error processing verification: {e}", exc_info=True)
+                await channel.send(
+                    f"Error processing verification: {e}", delete_after=10
+                )
+
+        elif str(payload.emoji) == "❌":  # ✅ Move this outside the try-except block
+            try:
+                await message.delete()
+                del self.pending_updates[payload.message_id]
+                logger.info(f"Submission rejected for {update_info['member']}")
+            except Exception as e:
+                logger.error(f"Error processing rejection: {e}", exc_info=True)
+
 
 async def setup(bot: commands.Bot):
     logger.info("Setting up MemberCommands cog")
