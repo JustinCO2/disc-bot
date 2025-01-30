@@ -118,24 +118,26 @@ class OfficerCommands(commands.Cog):
             )
             return
 
+        await interaction.response.defer(thinking=True)
+
         try:
-            # 🔹 Find the guild the member belongs to
             guild_name = await find_guild_by_member(name)
             if not guild_name:
-                await interaction.response.send_message(f"Error: Member '{name}' not found in any guild.", ephemeral=True)
+                await interaction.followup.send(f"Error: Member '{name}' not found in any guild.", ephemeral=True)
                 return
 
             if boss in ["rvd", "aod", "la"]:
                 new_damage = parse_damage_input(new_damage)
 
-            # 🔹 Now we pass `guild_name` retrieved dynamically
             await edit_member(self.bot, guild_name, name, boss, new_damage)
 
-            await interaction.response.send_message(
+            # 🔹 Use `followup.send()` since the response was deferred
+            await interaction.followup.send(
                 f"Successfully updated {boss} for member: {name} in {guild_name}"
             )
         except ValueError as e:
-            await interaction.response.send_message(f"Error: {str(e)}", ephemeral=True)
+            await interaction.followup.send(f"Error: {str(e)}", ephemeral=True)
+
 
     @member_group.command(name="delete")
     @app_commands.autocomplete(member_name=member_autocomplete, guild_name=guild_autocomplete)
