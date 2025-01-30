@@ -1,7 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from typing import Optional
-from commands.leaderboard import load_guilds
 
 MONGO_URL = os.getenv("MONGO_URL")
 client = AsyncIOMotorClient(MONGO_URL)
@@ -103,16 +102,18 @@ async def edit_member(bot, guild_name: str, name: str, boss: str, new_damage: in
     if result.matched_count == 0:
         raise ValueError(f"Member {name} not found in any guild")
 
-    # 🔹 Load the updated guild data from the database
-    guilds = await load_guilds()
-    if guild_name not in guilds:
-        raise ValueError(f"Guild {guild_name} not found in loaded data.")
+    # 🔹 Fetch the updated guild data directly
+    guild_data = await db.guilds.find_one({"_id": guild_name})
+    if not guild_data:
+        raise ValueError(f"Guild {guild_name} not found in the database.")
 
+    # 🔹 Update the leaderboard
     leaderboard_cog = bot.get_cog("LeaderboardCog")
     if leaderboard_cog:
-        await leaderboard_cog.update_guild_leaderboard(guild_name, guilds[guild_name])
+        await leaderboard_cog.update_guild_leaderboard(guild_name, guild_data)
     else:
         logger.error("LeaderboardCog not found! Cannot update leaderboard.")
+
 
 
 async def submit_dmg(member: str, boss: str, damage: str, attachment: str):
@@ -190,9 +191,9 @@ async def update_member_data(bot, guild_name: str, member: str, field: str, valu
         raise ValueError(f"Guild {guild_name} or member {member} not found")
 
     # 🔹 Load updated guild data
-    guilds = await load_guilds()
-    if guild_name not in guilds:
-        raise ValueError(f"Guild {guild_name} not found in loaded data.")
+    guild_data = await db.guilds.find_one({"_id": guild_name})
+    if not guild_data:
+        raise ValueError(f"Guild {guild_name} not found in the database.")
 
     # 🔹 Get the LeaderboardCog and refresh the leaderboard
     leaderboard_cog = bot.get_cog("LeaderboardCog")
