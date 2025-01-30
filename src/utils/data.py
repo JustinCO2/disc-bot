@@ -84,8 +84,9 @@ async def add_member(name: str, guild: str, rvd: Optional[int] = 0, aod: Optiona
     if result.matched_count == 0:
         raise ValueError(f"Guild {guild} not found or member {name} already exists")
 
-async def edit_member(name: str, boss: str, new_damage: int):
-    """Edit member data."""
+async def edit_member(bot, guild_name: str, name: str, boss: str, new_damage: int):
+    """Edit member data and trigger leaderboard update."""
+    
     if boss in ["rvd", "aod", "la"]:
         update_field = f"members.{name}.damages.{boss}"
     elif boss == "last_donation":
@@ -97,8 +98,21 @@ async def edit_member(name: str, boss: str, new_damage: int):
         {f"members.{name}": {"$exists": True}},
         {"$set": {update_field: new_damage}}
     )
+
     if result.matched_count == 0:
         raise ValueError(f"Member {name} not found in any guild")
+
+    # 🔹 Load the updated guild data from the database
+    guilds = await load_guilds()
+    if guild_name not in guilds:
+        raise ValueError(f"Guild {guild_name} not found in loaded data.")
+
+    leaderboard_cog = bot.get_cog("LeaderboardCog")
+    if leaderboard_cog:
+        await leaderboard_cog.update_guild_leaderboard(guild_name, guilds[guild_name])
+    else:
+        logger.error("LeaderboardCog not found! Cannot update leaderboard.")
+
 
 async def submit_dmg(member: str, boss: str, damage: str, attachment: str):
     """Submit a damage update request."""
@@ -155,8 +169,9 @@ async def find_guild_by_channel(channel_id: int) -> Optional[str]:
     guild = await db.guilds.find_one({"channels.verification": str(channel_id)})
     return guild["_id"] if guild else None
 
-async def update_member_data(guild_name: str, member: str, field: str, value: any):
-    """Update a member's data field after approval."""
+async def update_member_data(bot, guild_name: str, member: str, field: str, value: any):
+    """Update a member's data field after approval and refresh the leaderboard."""
+    
     if field == "damages":
         boss, damage = value
         update_field = f"members.{member}.damages.{boss}"
@@ -169,5 +184,19 @@ async def update_member_data(guild_name: str, member: str, field: str, value: an
         {"_id": guild_name},
         {"$set": {update_field: damage if field == "damages" else value}}
     )
+
     if result.matched_count == 0:
         raise ValueError(f"Guild {guild_name} or member {member} not found")
+
+    # 🔹 Load updated guild data
+    guilds = await load_guilds()
+    if guild_name not in guilds:
+        raise ValueError(f"Guild {guild_name} not found in loaded data.")
+
+    # 🔹 Get the LeaderboardCog and refresh the leaderboard
+    leaderboard_cog = bot.get_cog("LeaderboardCog")
+    if leaderboard_cog:
+        await leaderboard_cog.update_guild_leaderboard(guild_name, guilds[guild_name])
+        logger.info(f"Leaderboard refreshed for {guild_name}")
+    else:
+        logger.error("LeaderboardCog not found! Cannot update leaderboard.")

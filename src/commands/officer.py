@@ -131,7 +131,7 @@ class OfficerCommands(commands.Cog):
             if boss in ["rvd", "aod", "la"]:
                 new_damage = parse_damage_input(new_damage)
 
-            await edit_member(name, boss, new_damage)
+            await edit_member(self.bot, name, boss, new_damage)
             await interaction.response.send_message(
                 f"Successfully updated {boss} for member: {name}"
             )

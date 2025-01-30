@@ -40,43 +40,6 @@ class LeaderboardCog(commands.Cog):
             return f"{damage / 1_000_000_000:.2f}B"
         return str(damage)
 
-    # --------------------------------------------------------------------------
-    # The old method to create a text-based leaderboard, commented out for now.
-    # --------------------------------------------------------------------------
-    """
-    def format_leaderboard(self, guild_name: str, guild_data: dict) -> str:
-        # Generate leaderboard text.
-        member_col_width = 7
-        rvd_col_width = 5
-        aod_col_width = 5
-        la_col_width = 5
-
-        leaderboard = ["```"]
-        leaderboard.append(f"{guild_name} DMG Board\n")
-        leaderboard.append(
-            f"{'#':<2} │ {'Members':<{member_col_width}} │ {'RVD':>{rvd_col_width}} │ {'AOD':>{aod_col_width}} │ {'LA':>{la_col_width}}"
-        )
-        leaderboard.append('─' * (2 + 3 + member_col_width + 3 + rvd_col_width + 3 + aod_col_width + 3 + la_col_width))
-
-        sorted_members = sorted(
-            guild_data.get("members", {}).items(),
-            key=lambda x: sum(x[1]["damages"].values()),
-            reverse=True
-        )
-
-        for idx, (member, data) in enumerate(sorted_members, 1):
-            damages = data["damages"]
-            leaderboard.append(
-                f"{idx:<2} │ {member[:member_col_width]:<{member_col_width}} │ "
-                f"{self.format_damage(damages['rvd']):>{rvd_col_width}} │ "
-                f"{self.format_damage(damages['aod']):>{aod_col_width}} │ "
-                f"{self.format_damage(damages['la']):>{la_col_width}}"
-            )
-
-        leaderboard.append("```")
-        return "\n".join(leaderboard)
-    """
-
     async def load_guilds(self) -> dict:
         """Load all guilds from MongoDB."""
         guilds = {}
@@ -165,17 +128,20 @@ class LeaderboardCog(commands.Cog):
         except Exception as e:
             logger.error(f"Error updating leaderboard for {guild_name}: {e}")
 
+'''
     @tasks.loop(minutes=1)
     async def update_leaderboards(self):
         logger.info("Running scheduled leaderboard update...")
         guilds = await self.load_guilds()
         for guild_name, guild_data in guilds.items():
             await self.update_guild_leaderboard(guild_name, guild_data)
+            
 
     @update_leaderboards.before_loop
     async def before_update(self):
         await self.bot.wait_until_ready()
         await self.initialize_leaderboards()
+'''
 
 async def setup(bot):
     await bot.add_cog(LeaderboardCog(bot))

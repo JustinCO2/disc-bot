@@ -157,8 +157,7 @@ class MemberCommands(commands.Cog):
                 field = update_info['field']
                 value = update_info['value']  # Expected: (boss, damage)
 
-                # Use update_member_data utility to process the update
-                await update_member_data(guild_name, member, field, value)
+                await update_member_data(self.bot, guild_name, member, field, value)
                 logger.info(f"Update approved for {member} in {guild_name}")
 
                 # Delete the verification message
