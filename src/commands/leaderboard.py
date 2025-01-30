@@ -86,58 +86,58 @@ class LeaderboardCog(commands.Cog):
                 logger.error(f"Error creating leaderboard for {guild_name}: {e}")
 
     async def update_guild_leaderboard(self, guild_name: str, guild_data: dict):
-    try:
-        channel_id = int(guild_data["channels"]["leaderboard"])
-        channel = self.bot.get_channel(channel_id)
-        if not channel:
-            logger.error(f"Channel {channel_id} not found for guild {guild_name}")
-            return
+        try:
+            channel_id = int(guild_data["channels"]["leaderboard"])
+            channel = self.bot.get_channel(channel_id)
+            if not channel:
+                logger.error(f"Channel {channel_id} not found for guild {guild_name}")
+                return
 
-        # ---------------- NEW IMAGE GENERATION ----------------
-        # Create the damage board image (and HTML if needed).
-        screenshot_path, html_path = create_damage_board(guild_name, guild_data)
+            # ---------------- NEW IMAGE GENERATION ----------------
+            # Create the damage board image (and HTML if needed).
+            screenshot_path, html_path = create_damage_board(guild_name, guild_data)
 
-        # Retrieve the message ID if it exists
-        message = None
-        if guild_name in self.messages:
-            try:
-                message = await channel.fetch_message(int(self.messages[guild_name]))
-            except (discord.NotFound, discord.HTTPException):
-                logger.info(f"Stored message for {guild_name} not found, will create a new one")
-                message = None  # Message does not exist anymore
-
-        # Prepare the new leaderboard file
-        file = discord.File(screenshot_path, filename=os.path.basename(screenshot_path))
-
-        if message:
-            # ✅ Edit the existing message instead of creating a new one
-            await message.edit(content="", attachments=[file])
-            logger.info(f"Updated existing leaderboard image for {guild_name}")
-        else:
-            # ✅ Send a new message if none exists
-            new_message = await channel.send(file=file)
-
-            # 🔹 Get the last few messages in the channel to check for outdated leaderboard messages
-            messages = [msg async for msg in channel.history(limit=5)]  # Fetch recent messages
-            most_recent_message = messages[0] if messages else None  # Latest message in channel
-
-            # 🔹 If an old message exists and is NOT the most recent, delete it
-            old_message_id = self.messages.get(guild_name)
-            if old_message_id and most_recent_message and int(old_message_id) != most_recent_message.id:
+            # Retrieve the message ID if it exists
+            message = None
+            if guild_name in self.messages:
                 try:
-                    old_message = await channel.fetch_message(int(old_message_id))
-                    await old_message.delete()
-                    logger.info(f"Deleted old leaderboard message for {guild_name} (not most recent)")
+                    message = await channel.fetch_message(int(self.messages[guild_name]))
                 except (discord.NotFound, discord.HTTPException):
-                    logger.info(f"Old leaderboard message for {guild_name} not found, skipping deletion")
+                    logger.info(f"Stored message for {guild_name} not found, will create a new one")
+                    message = None  # Message does not exist anymore
 
-            # Store the new message ID for future updates
-            self.messages[guild_name] = str(new_message.id)
-            await self.save_message_id(guild_name, str(new_message.id))
-            logger.info(f"Created new leaderboard image for {guild_name}")
+            # Prepare the new leaderboard file
+            file = discord.File(screenshot_path, filename=os.path.basename(screenshot_path))
 
-    except Exception as e:
-        logger.error(f"Error updating leaderboard for {guild_name}: {e}")
+            if message:
+                # ✅ Edit the existing message instead of creating a new one
+                await message.edit(content="", attachments=[file])
+                logger.info(f"Updated existing leaderboard image for {guild_name}")
+            else:
+                # ✅ Send a new message if none exists
+                new_message = await channel.send(file=file)
+
+                # 🔹 Get the last few messages in the channel to check for outdated leaderboard messages
+                messages = [msg async for msg in channel.history(limit=5)]  # Fetch recent messages
+                most_recent_message = messages[0] if messages else None  # Latest message in channel
+
+                # 🔹 If an old message exists and is NOT the most recent, delete it
+                old_message_id = self.messages.get(guild_name)
+                if old_message_id and most_recent_message and int(old_message_id) != most_recent_message.id:
+                    try:
+                        old_message = await channel.fetch_message(int(old_message_id))
+                        await old_message.delete()
+                        logger.info(f"Deleted old leaderboard message for {guild_name} (not most recent)")
+                    except (discord.NotFound, discord.HTTPException):
+                        logger.info(f"Old leaderboard message for {guild_name} not found, skipping deletion")
+
+                # Store the new message ID for future updates
+                self.messages[guild_name] = str(new_message.id)
+                await self.save_message_id(guild_name, str(new_message.id))
+                logger.info(f"Created new leaderboard image for {guild_name}")
+
+        except Exception as e:
+            logger.error(f"Error updating leaderboard for {guild_name}: {e}")
 
 
 '''
