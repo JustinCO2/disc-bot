@@ -3,7 +3,7 @@ from discord import app_commands
 import discord
 from typing import Optional
 from commands.member import boss_autocomplete
-from utils.data import add_member, edit_member, parse_damage_input
+from utils.data import add_member, edit_member, parse_damage_input, find_guild_by_member
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
