@@ -190,7 +190,7 @@ async def update_member_data(bot, guild_name: str, member: str, field: str, valu
     if result.matched_count == 0:
         raise ValueError(f"Guild {guild_name} or member {member} not found")
 
-    # 🔹 Load updated guild data
+    # 🔹 Fetch updated guild data directly (Fix the issue!)
     guild_data = await db.guilds.find_one({"_id": guild_name})
     if not guild_data:
         raise ValueError(f"Guild {guild_name} not found in the database.")
@@ -198,7 +198,7 @@ async def update_member_data(bot, guild_name: str, member: str, field: str, valu
     # 🔹 Get the LeaderboardCog and refresh the leaderboard
     leaderboard_cog = bot.get_cog("LeaderboardCog")
     if leaderboard_cog:
-        await leaderboard_cog.update_guild_leaderboard(guild_name, guilds[guild_name])
+        await leaderboard_cog.update_guild_leaderboard(guild_name, guild_data)  # ✅ Use `guild_data` instead of `guilds[guild_name]`
         logger.info(f"Leaderboard refreshed for {guild_name}")
     else:
         logger.error("LeaderboardCog not found! Cannot update leaderboard.")
