@@ -5,11 +5,10 @@ from dotenv import load_dotenv
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 
-load_dotenv()
-
 # Load MongoDB URL and Discord Token
 MONGO_URL = os.getenv("MONGO_URL")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+print(f"DISCORD_TOKEN (first 5 chars): {DISCORD_TOKEN[:5] if DISCORD_TOKEN else 'Not Found'}")
 
 # MongoDB connection setup
 client = AsyncIOMotorClient(MONGO_URL)

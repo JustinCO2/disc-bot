@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 MONGO_URL = os.getenv("MONGO_URL")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client["discord_bot"]
@@ -44,7 +43,6 @@ def parse_damage_input(damage_str):
         return float(damage_str)
     except ValueError:
         raise ValueError("Invalid damage input format")
-
 
 async def create_guild(name: str, announce_id: str, leaderboard_id: str, verif_id: str, role_id: str):
     """Create a new guild using the template."""
@@ -117,8 +115,6 @@ async def edit_member(bot, guild_name: str, name: str, boss: str, new_damage: in
         await leaderboard_cog.update_guild_leaderboard(guild_name, guild_data)
     else:
         logger.error("LeaderboardCog not found! Cannot update leaderboard.")
-
-
 
 async def submit_dmg(member: str, boss: str, damage: str, attachment: str):
     """Submit a damage update request."""
